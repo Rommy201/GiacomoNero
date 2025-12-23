@@ -12,17 +12,35 @@ from strategy import BlackjackStrategy
 class BlackjackAssistant:
     def __init__(self, root):
         self.root = root
-        self.root.title("Blackjack Assistant")
-        self.root.geometry("900x800")
-        self.root.configure(bg='#0d1b2a')
+        self.root.title("♠️ Blackjack Pro")
+        
+        # Dimensioni ottimizzate per smartphone (portrait mode)
+        window_width = 420
+        window_height = 920
+        
+        # Centra la finestra
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        
+        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        self.root.configure(bg='#0a0e27')
+        
+        # Rendi la finestra non ridimensionabile per mantenere il layout
+        self.root.resizable(False, False)
         
         self.card_counter = CardCounter()
         self.strategy = BlackjackStrategy()
         
         self.player_cards = []
+        self.player_cards_split = []  # Seconda mano dopo split
         self.dealer_card = None
+        self.dealer_cards = []  # Lista completa carte del banco
         self.other_players_cards = []  # Lista di carte di altri giocatori
         self.current_bet = 0  # Puntata corrente della mano
+        self.is_split_hand = False  # Flag per indicare se è una mano splittata
+        self.current_split_hand = 1  # 1 o 2 - quale mano stiamo giocando
         
         # Modalità selezione: 'dealer', 'player', 'table'
         self.selection_mode = tk.StringVar(value='dealer')
@@ -30,681 +48,395 @@ class BlackjackAssistant:
         self.setup_ui()
         
     def setup_ui(self):
-        # Titolo
-        title = tk.Label(
-            self.root, 
-            text="♠ BLACKJACK ASSISTANT ♣", 
-            font=("Arial", 24, "bold"),
-            bg='#0d1b2a',
-            fg='#00ff00'
-        )
-        title.pack(pady=15)
-        
-        # Frame per setup iniziale
-        setup_frame = tk.LabelFrame(
-            self.root, 
-            text="Setup Tavolo", 
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffffff',
-            padx=15,
-            pady=10
-        )
-        setup_frame.pack(padx=20, pady=5, fill='x')
-        
-        # Numero mazzi
-        deck_frame = tk.Frame(setup_frame, bg='#1b263b')
-        deck_frame.pack(fill='x', pady=5)
+        # Header compatto
+        header = tk.Frame(self.root, bg='#1a1f3a', height=60)
+        header.pack(fill='x', padx=0, pady=0)
         
         tk.Label(
-            deck_frame, 
-            text="Mazzi rimanenti:", 
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).pack(side='left')
+            header, 
+            text="♠️ BLACKJACK PRO ♣️", 
+            font=("Arial", 18, "bold"),
+            bg='#1a1f3a',
+            fg='#ffd700'
+        ).pack(pady=8)
         
+        # Container scrollabile
+        canvas = tk.Canvas(self.root, bg='#0a0e27', highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#0a0e27')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Setup compatto in accordion style
+        self.setup_collapsed = tk.BooleanVar(value=True)
+        
+        setup_header = tk.Frame(scrollable_frame, bg='#1a1f3a', cursor='hand2')
+        setup_header.pack(fill='x', padx=5, pady=(5, 0))
+        setup_header.bind('<Button-1>', lambda e: self.toggle_setup())
+        
+        tk.Label(
+            setup_header,
+            text="⚙️ SETUP",
+            font=("Arial", 12, "bold"),
+            bg='#1a1f3a',
+            fg='#ffffff'
+        ).pack(side='left', padx=10, pady=8)
+        
+        self.setup_arrow = tk.Label(
+            setup_header,
+            text="▼",
+            font=("Arial", 10),
+            bg='#1a1f3a',
+            fg='#ffffff'
+        )
+        self.setup_arrow.pack(side='right', padx=10)
+        
+        # Setup content (collapsibile)
+        self.setup_content = tk.Frame(scrollable_frame, bg='#151a35')
+        
+        # Mazzi in riga singola
+        deck_row = tk.Frame(self.setup_content, bg='#151a35')
+        deck_row.pack(fill='x', padx=10, pady=5)
+        
+        tk.Label(deck_row, text="Mazzi:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left')
         self.deck_var = tk.StringVar(value="6")
-        deck_spin = tk.Spinbox(
-            deck_frame, 
-            from_=1, 
-            to=8, 
-            textvariable=self.deck_var,
-            width=5,
-            font=("Arial", 10)
-        )
-        deck_spin.pack(side='left', padx=10)
+        tk.Spinbox(deck_row, from_=1, to=8, textvariable=self.deck_var, width=3, font=("Arial", 9)).pack(side='left', padx=5)
+        tk.Button(deck_row, text="Set", command=self.set_decks, bg='#2a3f5f', fg='#fff', font=("Arial", 8, "bold"), padx=8, pady=2).pack(side='left', padx=2)
+        tk.Button(deck_row, text="Reset", command=self.reset_count, bg='#7d2e2e', fg='#fff', font=("Arial", 8, "bold"), padx=8, pady=2).pack(side='left', padx=2)
         
-        tk.Button(
-            deck_frame,
-            text="Imposta",
-            command=self.set_decks,
-            bg='#415a77',
-            fg='#ffffff',
-            font=("Arial", 9, "bold"),
-            padx=15
-        ).pack(side='left', padx=5)
+        # Bankroll in riga singola
+        bank_row = tk.Frame(self.setup_content, bg='#151a35')
+        bank_row.pack(fill='x', padx=10, pady=5)
         
-        tk.Button(
-            deck_frame,
-            text="Reset Conteggio",
-            command=self.reset_count,
-            bg='#e63946',
-            fg='#ffffff',
-            font=("Arial", 9, "bold"),
-            padx=15
-        ).pack(side='left', padx=5)
-        
-        # Setup Bankroll e Minimo Tavolo
-        bankroll_frame = tk.Frame(setup_frame, bg='#1b263b')
-        bankroll_frame.pack(fill='x', pady=5)
-        
-        tk.Label(
-            bankroll_frame,
-            text="Bankroll Iniziale (€):",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).pack(side='left')
-        
+        tk.Label(bank_row, text="Bankroll €:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left')
         self.bankroll_var = tk.StringVar(value="1000")
-        tk.Entry(
-            bankroll_frame,
-            textvariable=self.bankroll_var,
-            width=10,
-            font=("Arial", 10)
-        ).pack(side='left', padx=10)
+        tk.Entry(bank_row, textvariable=self.bankroll_var, width=6, font=("Arial", 9)).pack(side='left', padx=5)
         
-        tk.Label(
-            bankroll_frame,
-            text="Minimo Tavolo (€):",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).pack(side='left', padx=(20, 0))
-        
+        tk.Label(bank_row, text="Min €:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left', padx=(10, 0))
         self.min_bet_var = tk.StringVar(value="10")
-        tk.Entry(
-            bankroll_frame,
-            textvariable=self.min_bet_var,
-            width=10,
-            font=("Arial", 10)
-        ).pack(side='left', padx=10)
+        tk.Entry(bank_row, textvariable=self.min_bet_var, width=4, font=("Arial", 9)).pack(side='left', padx=5)
         
-        tk.Button(
-            bankroll_frame,
-            text="Imposta Bankroll",
-            command=self.set_bankroll,
-            bg='#06a77d',
-            fg='#ffffff',
-            font=("Arial", 9, "bold"),
-            padx=15
-        ).pack(side='left', padx=5)
+        tk.Button(bank_row, text="Conferma", command=self.set_bankroll, bg='#2d5f2e', fg='#fff', font=("Arial", 8, "bold"), padx=10, pady=2).pack(side='left', padx=5)
         
-        # Conteggio corrente
-        self.count_frame = tk.LabelFrame(
-            self.root,
-            text="Conteggio Carte (Hi-Lo System)",
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffffff',
-            padx=15,
-            pady=10
-        )
-        self.count_frame.pack(padx=20, pady=5, fill='x')
+        # Conteggio in card compatta
+        count_card = tk.Frame(scrollable_frame, bg='#1a1f3a', relief='raised', bd=2)
+        count_card.pack(fill='x', padx=5, pady=5)
         
-        count_display = tk.Frame(self.count_frame, bg='#1b263b')
-        count_display.pack()
+        tk.Label(count_card, text="📊 CONTEGGIO", font=("Arial", 11, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(8, 5))
         
-        tk.Label(
-            count_display,
-            text="Running Count:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=0, column=0, padx=10, sticky='e')
+        # Griglia compatta 2x2 per contatori principali
+        count_grid = tk.Frame(count_card, bg='#1a1f3a')
+        count_grid.pack(pady=5)
         
-        self.running_count_label = tk.Label(
-            count_display,
-            text="0",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#00ff00',
-            width=8
-        )
-        self.running_count_label.grid(row=0, column=1, padx=10)
+        self.create_counter_display(count_grid, "Running", "0", 0, 0, '#4ecdc4')
+        self.create_counter_display(count_grid, "True", "0.0", 0, 1, '#ff6b6b')
+        self.create_counter_display(count_grid, "Carte", "312", 1, 0, '#95e1d3')
+        self.create_counter_display(count_grid, "Viste", "0", 1, 1, '#9896f1')
         
-        tk.Label(
-            count_display,
-            text="True Count:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=1, column=0, padx=10, sticky='e')
+        # Bankroll info compatta
+        bank_info = tk.Frame(count_card, bg='#151a35', relief='sunken', bd=1)
+        bank_info.pack(fill='x', padx=10, pady=(5, 8))
         
-        self.true_count_label = tk.Label(
-            count_display,
-            text="0.0",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#ffaa00',
-            width=8
-        )
-        self.true_count_label.grid(row=1, column=1, padx=10)
+        bank_row1 = tk.Frame(bank_info, bg='#151a35')
+        bank_row1.pack(fill='x', pady=2)
         
-        tk.Label(
-            count_display,
-            text="Carte Rimanenti:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=0, column=2, padx=10, sticky='e')
+        tk.Label(bank_row1, text="💰", font=("Arial", 12), bg='#151a35').pack(side='left', padx=5)
+        self.bankroll_label = tk.Label(bank_row1, text="1000€", font=("Arial", 14, "bold"), bg='#151a35', fg='#00ff00')
+        self.bankroll_label.pack(side='left')
         
-        self.cards_remaining_label = tk.Label(
-            count_display,
-            text="312",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#4ecdc4',
-            width=8
-        )
-        self.cards_remaining_label.grid(row=0, column=3, padx=10)
+        self.profit_label = tk.Label(bank_row1, text="(+0€)", font=("Arial", 11), bg='#151a35', fg='#aaa')
+        self.profit_label.pack(side='left', padx=5)
         
-        tk.Label(
-            count_display,
-            text="Carte Viste:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=1, column=2, padx=10, sticky='e')
+        bank_row2 = tk.Frame(bank_info, bg='#151a35')
+        bank_row2.pack(fill='x', pady=2)
         
-        self.cards_seen_label = tk.Label(
-            count_display,
-            text="0",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#e0e0e0',
-            width=8
-        )
-        self.cards_seen_label.grid(row=1, column=3, padx=10)
+        tk.Label(bank_row2, text="🎯", font=("Arial", 10), bg='#151a35').pack(side='left', padx=5)
+        self.hands_label = tk.Label(bank_row2, text="0 mani", font=("Arial", 9), bg='#151a35', fg='#aaa')
+        self.hands_label.pack(side='left')
         
-        # Separatore
-        tk.Frame(self.count_frame, bg='#415a77', height=2).pack(fill='x', pady=10)
+        self.winrate_label = tk.Label(bank_row2, text="• 0% WR", font=("Arial", 9), bg='#151a35', fg='#aaa')
+        self.winrate_label.pack(side='left', padx=10)
         
-        # Display Bankroll
-        bankroll_display = tk.Frame(self.count_frame, bg='#1b263b')
-        bankroll_display.pack()
+        # Suggerimento puntata prominente
+        bet_card = tk.Frame(scrollable_frame, bg='#2a1f3d', relief='raised', bd=3)
+        bet_card.pack(fill='x', padx=5, pady=5)
         
-        tk.Label(
-            bankroll_display,
-            text="Bankroll:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=0, column=0, padx=10, sticky='e')
-        
-        self.bankroll_label = tk.Label(
-            bankroll_display,
-            text="1000€",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#00ff00',
-            width=12
-        )
-        self.bankroll_label.grid(row=0, column=1, padx=10)
-        
-        tk.Label(
-            bankroll_display,
-            text="Profitto/Perdita:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=1, column=0, padx=10, sticky='e')
-        
-        self.profit_label = tk.Label(
-            bankroll_display,
-            text="0€",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#e0e0e0',
-            width=12
-        )
-        self.profit_label.grid(row=1, column=1, padx=10)
-        
-        tk.Label(
-            bankroll_display,
-            text="Mani Giocate:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=0, column=2, padx=10, sticky='e')
-        
-        self.hands_label = tk.Label(
-            bankroll_display,
-            text="0 (0V / 0P)",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#4ecdc4',
-            width=15
-        )
-        self.hands_label.grid(row=0, column=3, padx=10)
-        
-        tk.Label(
-            bankroll_display,
-            text="Win Rate:",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).grid(row=1, column=2, padx=10, sticky='e')
-        
-        self.winrate_label = tk.Label(
-            bankroll_display,
-            text="0%",
-            font=("Arial", 14, "bold"),
-            bg='#1b263b',
-            fg='#e0e0e0',
-            width=15
-        )
-        self.winrate_label.grid(row=1, column=3, padx=10)
-        
-        # Frame per Bet Spread
-        bet_frame = tk.LabelFrame(
-            self.root,
-            text="💰 SUGGERIMENTO PUNTATA",
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffd700',
-            padx=15,
-            pady=10
-        )
-        bet_frame.pack(padx=20, pady=5, fill='x')
+        tk.Label(bet_card, text="💎 PUNTATA SUGGERITA", font=("Arial", 10, "bold"), bg='#2a1f3d', fg='#ffd700').pack(pady=(8, 2))
         
         self.bet_suggestion_label = tk.Label(
-            bet_frame,
-            text="Puntata: Minimo del tavolo (10€)",
-            font=("Arial", 13, "bold"),
-            bg='#1b263b',
+            bet_card,
+            text="Minimo tavolo - 10€",
+            font=("Arial", 16, "bold"),
+            bg='#2a1f3d',
             fg='#ffffff',
-            wraplength=800
+            wraplength=380
         )
-        self.bet_suggestion_label.pack(pady=5)
+        self.bet_suggestion_label.pack(pady=(0, 8))
         
-        # Frame selezione modalità
-        mode_frame = tk.LabelFrame(
-            self.root,
-            text="📍 Seleziona Destinazione Carta",
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffffff',
-            padx=15,
-            pady=10
-        )
-        mode_frame.pack(padx=20, pady=5, fill='x')
+        # Selezione modalità compatta con pulsanti touch-friendly
+        mode_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
+        mode_card.pack(fill='x', padx=5, pady=5)
         
-        mode_buttons_frame = tk.Frame(mode_frame, bg='#1b263b')
-        mode_buttons_frame.pack()
+        tk.Label(mode_card, text="🎴 SELEZIONA CARTA", font=("Arial", 10, "bold"), bg='#1a1f3a', fg='#ffffff').pack(pady=(8, 5))
         
-        # Radio buttons per selezione modalità
-        tk.Radiobutton(
-            mode_buttons_frame,
-            text="🎴 Carta Banco",
-            variable=self.selection_mode,
-            value='dealer',
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ff6b6b',
-            selectcolor='#415a77',
-            activebackground='#1b263b',
-            activeforeground='#ff6b6b',
-            indicatoron=0,
-            width=15,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        mode_buttons = tk.Frame(mode_card, bg='#1a1f3a')
+        mode_buttons.pack(pady=5)
         
         tk.Radiobutton(
-            mode_buttons_frame,
-            text="🃏 Le Mie Carte",
-            variable=self.selection_mode,
-            value='player',
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#4ecdc4',
-            selectcolor='#415a77',
-            activebackground='#1b263b',
-            activeforeground='#4ecdc4',
-            indicatoron=0,
-            width=15,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+            mode_buttons, text="🎴 Banco", variable=self.selection_mode, value='dealer',
+            font=("Arial", 9, "bold"), bg='#5d2e46', fg='#fff', selectcolor='#7d3e56',
+            activebackground='#5d2e46', indicatoron=0, width=11, padx=5, pady=8
+        ).pack(side='left', padx=2)
         
         tk.Radiobutton(
-            mode_buttons_frame,
-            text="🎯 Altre Carte Tavolo",
-            variable=self.selection_mode,
-            value='table',
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffaa00',
-            selectcolor='#415a77',
-            activebackground='#1b263b',
-            activeforeground='#ffaa00',
-            indicatoron=0,
-            width=15,
+            mode_buttons, text="🃏 Mie", variable=self.selection_mode, value='player',
+            font=("Arial", 9, "bold"), bg='#2e5d4f', fg='#fff', selectcolor='#3e7d6f',
+            activebackground='#2e5d4f', indicatoron=0, width=11, padx=5, pady=8
+        ).pack(side='left', padx=2)
+        
+        tk.Radiobutton(
+            mode_buttons, text="🎯 Tavolo", variable=self.selection_mode, value='table',
+            font=("Arial", 9, "bold"), bg='#5d532e', fg='#fff', selectcolor='#7d6f3e',
+            activebackground='#5d532e', indicatoron=0, width=11, padx=5, pady=8
+        ).pack(side='left', padx=2)
+        
+        # Griglia carte compatta e touch-friendly
+        cards_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
+        cards_card.pack(fill='x', padx=5, pady=5)
+        
+        # Riga 1: A, 2-6
+        row1 = tk.Frame(cards_card, bg='#1a1f3a')
+        row1.pack(pady=2)
+        for card in ['A', '2', '3', '4', '5', '6']:
+            self.create_card_button_mobile(row1, card)
+        
+        # Riga 2: 7-Q
+        row2 = tk.Frame(cards_card, bg='#1a1f3a')
+        row2.pack(pady=2)
+        for card in ['7', '8', '9', '10', 'J', 'Q']:
+            self.create_card_button_mobile(row2, card)
+        
+        # Riga 3: K
+        row3 = tk.Frame(cards_card, bg='#1a1f3a')
+        row3.pack(pady=2)
+        self.create_card_button_mobile(row3, 'K')
+        
+        # Display mano corrente compatto
+        hand_card = tk.Frame(scrollable_frame, bg='#151a35', relief='ridge', bd=2)
+        hand_card.pack(fill='x', padx=5, pady=5)
+        
+        tk.Label(hand_card, text="🎰 MANO", font=("Arial", 10, "bold"), bg='#151a35', fg='#ffd700').pack(pady=(5, 2))
+        
+        dealer_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
+        dealer_frame.pack(fill='x', padx=10, pady=3)
+        
+        tk.Label(dealer_frame, text="Banco:", font=("Arial", 9), bg='#1a1f3a', fg='#ff6b6b').pack(side='left', padx=5)
+        self.dealer_display = tk.Label(dealer_frame, text="?", font=("Arial", 11), bg='#1a1f3a', fg='#ff6b6b', wraplength=250)
+        self.dealer_display.pack(side='left', padx=5, pady=3)
+        
+        self.dealer_total_label = tk.Label(hand_card, text="", font=("Arial", 11, "bold"), bg='#151a35', fg='#ff6b6b')
+        self.dealer_total_label.pack(pady=2)
+        
+        player_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
+        player_frame.pack(fill='x', padx=10, pady=3)
+        
+        tk.Label(player_frame, text="Mano 1:", font=("Arial", 9), bg='#1a1f3a', fg='#4ecdc4').pack(side='left', padx=5)
+        self.player_cards_label = tk.Label(player_frame, text="-", font=("Arial", 11), bg='#1a1f3a', fg='#ffffff', wraplength=250)
+        self.player_cards_label.pack(side='left', padx=5, pady=3)
+        
+        self.player_total_label = tk.Label(hand_card, text="Tot: -", font=("Arial", 12, "bold"), bg='#151a35', fg='#4ecdc4')
+        self.player_total_label.pack(pady=3)
+        
+        # Frame per mano split (inizialmente nascosto)
+        self.split_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
+        
+        tk.Label(self.split_frame, text="Mano 2:", font=("Arial", 9), bg='#1a1f3a', fg='#95e1d3').pack(side='left', padx=5)
+        self.player_cards_split_label = tk.Label(self.split_frame, text="-", font=("Arial", 11), bg='#1a1f3a', fg='#ffffff', wraplength=250)
+        self.player_cards_split_label.pack(side='left', padx=5, pady=3)
+        
+        self.player_split_total_label = tk.Label(hand_card, text="", font=("Arial", 12, "bold"), bg='#151a35', fg='#95e1d3')
+        
+        # Bottone per switchare mano attiva (nascosto inizialmente)
+        self.switch_hand_btn = tk.Button(
+            hand_card,
+            text="🔀 Passa a Mano 2",
+            command=self.switch_split_hand,
+            bg='#3a5f7d',
+            fg='#ffffff',
+            font=("Arial", 9, "bold"),
             padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+            pady=3
+        )
         
-        # Frame per bottoni carte
-        cards_frame = tk.LabelFrame(
-            self.root,
-            text="🎴 Clicca sulla Carta",
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
+        # Bottone per attivare split
+        self.activate_split_btn = tk.Button(
+            hand_card,
+            text="✂️ SPLIT",
+            command=self.activate_split,
+            bg='#5d3e7d',
             fg='#ffffff',
-            padx=15,
-            pady=10
+            font=("Arial", 9, "bold"),
+            padx=10,
+            pady=3
         )
-        cards_frame.pack(padx=20, pady=5, fill='x')
         
-        # Griglia di bottoni carte
-        cards_grid = tk.Frame(cards_frame, bg='#1b263b')
-        cards_grid.pack()
+        self.other_players_label = tk.Label(hand_card, text="Tavolo: -", font=("Arial", 8), bg='#151a35', fg='#888', wraplength=360)
+        self.other_players_label.pack(pady=(2, 5))
         
-        # Prima riga: A, 2-7
-        row1 = tk.Frame(cards_grid, bg='#1b263b')
-        row1.pack(pady=5)
+        # Strategia prominente
+        strategy_card = tk.Frame(scrollable_frame, bg='#1f3a1a', relief='raised', bd=3)
+        strategy_card.pack(fill='x', padx=5, pady=5)
         
-        cards_row1 = ['A', '2', '3', '4', '5', '6', '7']
-        for card in cards_row1:
-            self.create_card_button(row1, card)
-        
-        # Seconda riga: 8, 9, 10, J, Q, K
-        row2 = tk.Frame(cards_grid, bg='#1b263b')
-        row2.pack(pady=5)
-        
-        cards_row2 = ['8', '9', '10', 'J', 'Q', 'K']
-        for card in cards_row2:
-            self.create_card_button(row2, card)
-        
-        # Frame mano corrente - display
-        hand_frame = tk.LabelFrame(
-            self.root,
-            text="Mano Corrente",
-            font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffffff',
-            padx=15,
-            pady=10
-        )
-        hand_frame.pack(padx=20, pady=5, fill='x')
-        
-        # Display carta dealer
-        dealer_display_frame = tk.Frame(hand_frame, bg='#1b263b')
-        dealer_display_frame.pack(fill='x', pady=5)
-        
-        tk.Label(
-            dealer_display_frame,
-            text="Carta Banco:",
-            font=("Arial", 10, "bold"),
-            bg='#1b263b',
-            fg='#ffffff'
-        ).pack(side='left')
-        
-        self.dealer_display = tk.Label(
-            dealer_display_frame,
-            text="❓",
-            font=("Arial", 18, "bold"),
-            bg='#1b263b',
-            fg='#ff6b6b',
-            width=8
-        )
-        self.dealer_display.pack(side='left', padx=20)
-        
-        # Display carte giocatore
-        self.player_cards_label = tk.Label(
-            hand_frame,
-            text="Le tue carte: -",
-            font=("Arial", 11),
-            bg='#1b263b',
-            fg='#ffffff'
-        )
-        self.player_cards_label.pack(pady=5)
-        
-        self.player_total_label = tk.Label(
-            hand_frame,
-            text="Totale: -",
-            font=("Arial", 13, "bold"),
-            bg='#1b263b',
-            fg='#4ecdc4'
-        )
-        self.player_total_label.pack(pady=5)
-        
-        # Separatore
-        tk.Frame(hand_frame, bg='#415a77', height=2).pack(fill='x', pady=10)
-        
-        # Display carte altri giocatori
-        tk.Label(
-            hand_frame,
-            text="Carte Altri Giocatori (al tavolo):",
-            font=("Arial", 10, "bold"),
-            bg='#1b263b',
-            fg='#ffaa00'
-        ).pack(pady=3)
-        
-        self.other_players_label = tk.Label(
-            hand_frame,
-            text="Nessuna carta tracciata",
-            font=("Arial", 10),
-            bg='#1b263b',
-            fg='#aaaaaa',
-            wraplength=700
-        )
-        self.other_players_label.pack(pady=3)
-        
-        tk.Button(
-            hand_frame,
-            text="🔄 Nuova Mano",
-            command=self.new_hand,
-            bg='#f77f00',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            padx=20,
-            pady=5
-        ).pack(pady=10)
-        
-        # Suggerimento strategia
-        self.strategy_frame = tk.LabelFrame(
-            self.root,
-            text="💡 SUGGERIMENTO STRATEGIA",
-            font=("Arial", 12, "bold"),
-            bg='#1b263b',
-            fg='#00ff00',
-            padx=15,
-            pady=10
-        )
-        self.strategy_frame.pack(padx=20, pady=5, fill='both', expand=True)
+        tk.Label(strategy_card, text="💡 AZIONE", font=("Arial", 11, "bold"), bg='#1f3a1a', fg='#ffd700').pack(pady=(8, 2))
         
         self.strategy_label = tk.Label(
-            self.strategy_frame,
-            text="Seleziona 'Carta Banco' e clicca sulla carta del dealer\nPoi seleziona 'Le Mie Carte' e clicca sulle tue carte",
+            strategy_card,
+            text="Aspetto carte...",
             font=("Arial", 13, "bold"),
-            bg='#1b263b',
+            bg='#1f3a1a',
             fg='#ffffff',
-            wraplength=800,
+            wraplength=380,
             justify='center'
         )
-        self.strategy_label.pack(expand=True)
+        self.strategy_label.pack(pady=(0, 8), padx=10)
         
-        # Frame per registrare risultato mano
-        result_frame = tk.LabelFrame(
-            self.root,
-            text="🎲 RISULTATO MANO",
-            font=("Arial", 12, "bold"),
-            bg='#1b263b',
-            fg='#ffd700',
-            padx=15,
-            pady=10
-        )
-        result_frame.pack(padx=20, pady=5, fill='x')
+        # Puntata corrente
+        bet_current_card = tk.Frame(scrollable_frame, bg='#3a2a1a', relief='solid', bd=2)
+        bet_current_card.pack(fill='x', padx=5, pady=5)
         
-        # Display puntata corrente
         self.current_bet_label = tk.Label(
-            result_frame,
-            text="Puntata Corrente: Non impostata",
+            bet_current_card,
+            text="Puntata: -",
             font=("Arial", 11, "bold"),
-            bg='#1b263b',
-            fg='#ffaa00'
+            bg='#3a2a1a',
+            fg='#ffd700'
         )
-        self.current_bet_label.pack(pady=5)
+        self.current_bet_label.pack(pady=8)
         
-        # Bottoni risultato
-        buttons_frame = tk.Frame(result_frame, bg='#1b263b')
-        buttons_frame.pack(pady=5)
+        # Risultati in griglia compatta
+        result_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
+        result_card.pack(fill='x', padx=5, pady=5)
         
-        tk.Button(
-            buttons_frame,
-            text="✅ VINTO",
-            command=lambda: self.record_result('win'),
-            bg='#06a77d',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=12,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        tk.Label(result_card, text="🎲 RISULTATO", font=("Arial", 10, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(5, 3))
         
-        tk.Button(
-            buttons_frame,
-            text="❌ PERSO",
-            command=lambda: self.record_result('loss'),
-            bg='#e63946',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=12,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        res_grid1 = tk.Frame(result_card, bg='#1a1f3a')
+        res_grid1.pack(pady=2)
         
-        tk.Button(
-            buttons_frame,
-            text="🔄 PAREGGIO",
-            command=lambda: self.record_result('push'),
-            bg='#415a77',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=12,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        self.create_result_button(res_grid1, "✅", "win", '#2d5f2e', 0, 0)
+        self.create_result_button(res_grid1, "❌", "loss", '#7d2e2e', 0, 1)
+        self.create_result_button(res_grid1, "➖", "push", '#3a3a5f', 0, 2)
         
-        # Seconda riga di bottoni
-        buttons_frame2 = tk.Frame(result_frame, bg='#1b263b')
-        buttons_frame2.pack(pady=5)
+        res_grid2 = tk.Frame(result_card, bg='#1a1f3a')
+        res_grid2.pack(pady=2)
         
-        tk.Button(
-            buttons_frame2,
-            text="⭐ BLACKJACK!",
-            command=lambda: self.record_result('blackjack'),
-            bg='#f77f00',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=12,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        self.create_result_button(res_grid2, "⭐", "blackjack", '#7d5f2e', 0, 0)
+        self.create_result_button(res_grid2, "2xW", "double_win", '#2d5f2e', 0, 1)
+        self.create_result_button(res_grid2, "2xL", "double_loss", '#7d2e2e', 0, 2)
         
-        tk.Button(
-            buttons_frame2,
-            text="💰 DOPPIO VINTO",
-            command=lambda: self.record_result('double_win'),
-            bg='#06a77d',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=14,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        res_grid3 = tk.Frame(result_card, bg='#1a1f3a')
+        res_grid3.pack(pady=2)
         
-        tk.Button(
-            buttons_frame2,
-            text="💥 DOPPIO PERSO",
-            command=lambda: self.record_result('double_loss'),
-            bg='#e63946',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=14,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        self.create_result_button(res_grid3, "🏳️", "surrender", '#5f5a77', 0, 0)
         
-        tk.Button(
-            buttons_frame2,
-            text="🏳️ ARRESA",
-            command=lambda: self.record_result('surrender'),
-            bg='#778da9',
-            fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=12,
-            padx=10,
-            pady=5
-        ).pack(side='left', padx=5)
+        # Pack canvas e scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
-        # Inizializza conteggio
+        # Inizializza
         self.update_count_display()
     
-    def create_card_button(self, parent, card):
-        """Crea un bottone per una carta"""
-        # Simboli per le carte
+    def create_counter_display(self, parent, label, value, row, col, color):
+        """Crea un display compatto per contatori"""
+        frame = tk.Frame(parent, bg='#151a35', relief='solid', bd=1, width=90, height=55)
+        frame.grid(row=row, column=col, padx=3, pady=3, sticky='nsew')
+        frame.grid_propagate(False)
+        
+        tk.Label(frame, text=label, font=("Arial", 8), bg='#151a35', fg='#aaa').pack(pady=(3, 0))
+        
+        label_widget = tk.Label(frame, text=value, font=("Arial", 13, "bold"), bg='#151a35', fg=color)
+        label_widget.pack()
+        
+        # Salva riferimenti
+        if label == "Running":
+            self.running_count_label = label_widget
+        elif label == "True":
+            self.true_count_label = label_widget
+        elif label == "Carte":
+            self.cards_remaining_label = label_widget
+        elif label == "Viste":
+            self.cards_seen_label = label_widget
+    
+    def create_card_button_mobile(self, parent, card):
+        """Crea bottone carta ottimizzato per mobile"""
         card_symbols = {
-            'A': '🂡',
-            '2': '🂢',
-            '3': '🂣',
-            '4': '🂤',
-            '5': '🂥',
-            '6': '🂦',
-            '7': '🂧',
-            '8': '🂨',
-            '9': '🂩',
-            '10': '🂪',
-            'J': '🂫',
-            'Q': '🂭',
-            'K': '🂮'
+            'A': '🂡', '2': '🂢', '3': '🂣', '4': '🂤', '5': '🂥',
+            '6': '🂦', '7': '🂧', '8': '🂨', '9': '🂩', '10': '🂪',
+            'J': '🂫', 'Q': '🂭', 'K': '🂮'
         }
         
-        # Colori basati sul valore Hi-Lo
         if card in ['2', '3', '4', '5', '6']:
-            color = '#90ee90'  # Verde chiaro (carte basse +1)
+            color = '#4a7c59'  # Verde
         elif card in ['7', '8', '9']:
-            color = '#ffd700'  # Oro (carte neutre 0)
-        else:  # 10, J, Q, K, A
-            color = '#ff6b6b'  # Rosso chiaro (carte alte -1)
+            color = '#7c6a3a'  # Oro
+        else:
+            color = '#7c3a3a'  # Rosso
         
         btn = tk.Button(
             parent,
-            text=f"{card_symbols.get(card, card)}\n{card}",
+            text=f"{card}",
             command=lambda: self.card_clicked(card),
             bg=color,
-            fg='#000000',
-            font=("Arial", 16, "bold"),
+            fg='#ffffff',
+            font=("Arial", 13, "bold"),
             width=4,
-            height=2,
+            height=1,
             relief='raised',
-            borderwidth=3,
+            bd=2,
             cursor='hand2'
         )
-        btn.pack(side='left', padx=3)
+        btn.pack(side='left', padx=2, pady=2)
         
-        # Effetto hover
-        def on_enter(e):
-            btn['background'] = '#ffffff'
+        def on_press(e):
+            btn.config(relief='sunken')
         
-        def on_leave(e):
-            btn['background'] = color
+        def on_release(e):
+            btn.config(relief='raised')
         
-        btn.bind("<Enter>", on_enter)
-        btn.bind("<Leave>", on_leave)
+        btn.bind("<ButtonPress-1>", on_press)
+        btn.bind("<ButtonRelease-1>", on_release)
+    
+    def create_result_button(self, parent, text, result, color, row, col):
+        """Crea bottone risultato compatto"""
+        btn = tk.Button(
+            parent,
+            text=text,
+            command=lambda: self.record_result(result),
+            bg=color,
+            fg='#ffffff',
+            font=("Arial", 11, "bold"),
+            width=10,
+            height=2,
+            relief='raised',
+            bd=2
+        )
+        btn.grid(row=row, column=col, padx=3, pady=2)
+    
+    def toggle_setup(self):
+        """Toggle setup panel visibility"""
+        if self.setup_collapsed.get():
+            self.setup_content.pack(fill='x', padx=0, pady=0, after=self.setup_content.master.winfo_children()[0])
+            self.setup_arrow.config(text="▲")
+            self.setup_collapsed.set(False)
+        else:
+            self.setup_content.pack_forget()
+            self.setup_arrow.config(text="▼")
+            self.setup_collapsed.set(True)
     
     def card_clicked(self, card):
         """Gestisce il click su una carta"""
@@ -718,35 +450,66 @@ class BlackjackAssistant:
             self.add_table_card_direct(card)
     
     def set_dealer_card_direct(self, card):
-        """Imposta la carta del dealer"""
-        self.dealer_card = card
+        """Aggiunge una carta al banco (prima o successive)"""
+        # Se è la prima carta, imposta anche dealer_card per la strategia
+        if not self.dealer_cards:
+            self.dealer_card = card
+            self.dealer_cards = [card]
+        else:
+            self.dealer_cards.append(card)
         
-        card_symbols = {
-            'A': '🂡', '2': '🂢', '3': '🂣', '4': '🂤', '5': '🂥',
-            '6': '🂦', '7': '🂧', '8': '🂨', '9': '🂩', '10': '🂪',
-            'J': '🂫', 'Q': '🂭', 'K': '🂮'
-        }
-        
-        self.dealer_display.config(text=f"{card_symbols.get(card, card)} {card}")
+        self.update_dealer_display()
         self.card_counter.add_card(card)
         self.update_count_display()
-        self.update_suggestion()
+        
+        # Aggiorna suggerimento solo se è la prima carta
+        if len(self.dealer_cards) == 1:
+            self.update_suggestion()
         
         # Feedback visivo
-        self.dealer_display.config(bg='#2d5016')
-        self.root.after(200, lambda: self.dealer_display.config(bg='#1b263b'))
+        original_bg = self.dealer_display.cget('bg')
+        self.dealer_display.config(bg='#3d5026')
+        self.root.after(150, lambda: self.dealer_display.config(bg=original_bg))
     
     def add_player_card_direct(self, card):
         """Aggiungi una carta al giocatore"""
-        self.player_cards.append(card)
+        if self.is_split_hand and self.current_split_hand == 2:
+            self.player_cards_split.append(card)
+        else:
+            self.player_cards.append(card)
+            
         self.card_counter.add_card(card)
         self.update_player_display()
         self.update_count_display()
         self.update_suggestion()
+    
+    def activate_split(self):
+        """Attiva modalità split"""
+        if len(self.player_cards) == 2:
+            # Prendi una carta e mettila nella mano 2
+            self.player_cards_split = [self.player_cards.pop()]
+            self.is_split_hand = True
+            self.current_split_hand = 1
+            
+            # Mostra UI split
+            self.split_frame.pack(fill='x', padx=10, pady=3)
+            self.player_split_total_label.pack(pady=3)
+            self.switch_hand_btn.pack(pady=3)
+            self.activate_split_btn.pack_forget()
+            
+            self.update_player_display()
+            self.update_suggestion()
+    
+    def switch_split_hand(self):
+        """Passa da una mano all'altra"""
+        if self.current_split_hand == 1:
+            self.current_split_hand = 2
+            self.switch_hand_btn.config(text="🔀 Passa a Mano 1", bg='#3a7d5f')
+        else:
+            self.current_split_hand = 1
+            self.switch_hand_btn.config(text="🔀 Passa a Mano 2", bg='#3a5f7d')
         
-        # Auto-switch a 'table' dopo 2 carte
-        if len(self.player_cards) >= 2:
-            self.selection_mode.set('table')
+        self.update_suggestion()
     
     def add_table_card_direct(self, card):
         """Aggiungi una carta vista al tavolo (non del giocatore)"""
@@ -823,11 +586,8 @@ class BlackjackAssistant:
         # Aggiorna display
         self.update_count_display()
         
-        # Reset puntata corrente
-        self.current_bet = 0
-        self.current_bet_label.config(text="Puntata Corrente: Non impostata", fg='#ffaa00')
-        
-        messagebox.showinfo("Risultato Registrato", result_messages.get(result, "Registrato"))
+        # Reset automatico per nuova mano
+        self.new_hand()
     
     # Rimuovi i vecchi metodi set_dealer_card, add_player_card, add_table_card
     # perché ora usiamo i metodi _direct
@@ -835,52 +595,78 @@ class BlackjackAssistant:
     def update_other_players_display(self):
         """Aggiorna il display delle carte degli altri giocatori"""
         if self.other_players_cards:
-            card_symbols = {
-                'A': '🂡', '2': '🂢', '3': '🂣', '4': '🂤', '5': '🂥',
-                '6': '🂦', '7': '🂧', '8': '🂨', '9': '🂩', '10': '🂪',
-                'J': '🂫', 'Q': '🂭', 'K': '🂮'
-            }
-            
-            # Raggruppa le carte per tipo
             from collections import Counter
             card_counts = Counter(self.other_players_cards)
             
             cards_display = " ".join([
-                f"{card_symbols.get(card, card)}{card}" + 
-                (f"×{count}" if count > 1 else "")
+                f"{card}" + (f"×{count}" if count > 1 else "")
                 for card, count in card_counts.items()
             ])
             
             self.other_players_label.config(
-                text=f"{cards_display} (Totale: {len(self.other_players_cards)} carte)",
-                fg='#ffaa00'
+                text=f"Tavolo: {cards_display}",
+                fg='#aaa'
             )
         else:
             self.other_players_label.config(
-                text="Nessuna carta tracciata",
-                fg='#aaaaaa'
+                text="Tavolo: -",
+                fg='#888'
             )
     
-    def update_player_display(self):
-        if self.player_cards:
-            # Usa simboli delle carte
-            card_symbols = {
-                'A': '🂡', '2': '🂢', '3': '🂣', '4': '🂤', '5': '🂥',
-                '6': '🂦', '7': '🂧', '8': '🂨', '9': '🂩', '10': '🂪',
-                'J': '🂫', 'Q': '🂭', 'K': '🂮'
-            }
+    def update_dealer_display(self):
+        """Aggiorna il display delle carte del banco"""
+        if self.dealer_cards:
+            cards_display = " ".join(self.dealer_cards)
+            self.dealer_display.config(text=cards_display)
             
-            cards_display = " ".join([f"{card_symbols.get(c, c)}{c}" for c in self.player_cards])
-            self.player_cards_label.config(text=f"Le tue carte: {cards_display}")
+            total, soft = self.calculate_hand_value(self.dealer_cards)
+            total_str = f"Tot: {total}"
+            if soft:
+                total_str += " (S)"
+            self.dealer_total_label.config(text=total_str)
+        else:
+            self.dealer_display.config(text="?")
+            self.dealer_total_label.config(text="")
+    
+    def update_player_display(self):
+        # Mano 1
+        if self.player_cards:
+            cards_display = " ".join(self.player_cards)
+            self.player_cards_label.config(text=cards_display)
             
             total, soft = self.calculate_hand_value(self.player_cards)
-            total_str = f"Totale: {total}"
+            total_str = f"Tot: {total}"
             if soft:
-                total_str += " (soft)"
+                total_str += " (S)"
             self.player_total_label.config(text=total_str)
         else:
-            self.player_cards_label.config(text="Le tue carte: -")
-            self.player_total_label.config(text="Totale: -")
+            self.player_cards_label.config(text="-")
+            self.player_total_label.config(text="Tot: -")
+        
+        # Mano 2 (se split attivo)
+        if self.is_split_hand:
+            if self.player_cards_split:
+                cards_display = " ".join(self.player_cards_split)
+                self.player_cards_split_label.config(text=cards_display)
+                
+                total, soft = self.calculate_hand_value(self.player_cards_split)
+                total_str = f"Tot: {total}"
+                if soft:
+                    total_str += " (S)"
+                self.player_split_total_label.config(text=total_str)
+            else:
+                self.player_cards_split_label.config(text="-")
+                self.player_split_total_label.config(text="")
+        
+        # Mostra/nascondi bottone split
+        if len(self.player_cards) == 2 and not self.is_split_hand:
+            # Controlla se è una coppia
+            if self.player_cards[0][0] == self.player_cards[1][0]:
+                self.activate_split_btn.pack(pady=3)
+            else:
+                self.activate_split_btn.pack_forget()
+        else:
+            self.activate_split_btn.pack_forget()
             
     def calculate_hand_value(self, cards):
         """Calcola il valore della mano e se è soft (con asso contato come 11)"""
@@ -921,6 +707,7 @@ class BlackjackAssistant:
         hands = self.card_counter.hands_played
         wins = self.card_counter.hands_won
         losses = self.card_counter.hands_lost
+        pushes = self.card_counter.hands_pushed
         winrate = self.card_counter.get_win_rate()
         
         self.bankroll_label.config(text=f"{bankroll:.0f}€")
@@ -928,17 +715,17 @@ class BlackjackAssistant:
         # Colora profitto/perdita
         if profit > 0:
             profit_color = '#00ff00'
-            profit_text = f"+{profit:.0f}€"
+            profit_text = f"(+{profit:.0f}€)"
         elif profit < 0:
             profit_color = '#ff4444'
-            profit_text = f"{profit:.0f}€"
+            profit_text = f"({profit:.0f}€)"
         else:
-            profit_color = '#e0e0e0'
-            profit_text = f"{profit:.0f}€"
+            profit_color = '#aaa'
+            profit_text = f"(±0€)"
         
         self.profit_label.config(text=profit_text, fg=profit_color)
-        self.hands_label.config(text=f"{hands} ({wins}V / {losses}P)")
-        self.winrate_label.config(text=f"{winrate:.1f}%")
+        self.hands_label.config(text=f"{hands} ({wins}V-{losses}P-{pushes}Pa)")
+        self.winrate_label.config(text=f"• {winrate:.1f}% WR")
         
         # Colora bankroll in base alla situazione
         if bankroll < self.card_counter.initial_bankroll * 0.5:
@@ -960,27 +747,38 @@ class BlackjackAssistant:
             
         self.true_count_label.config(fg=color)
         
-        # Aggiorna suggerimento bet spread
+        # Aggiorna suggerimento bet spread (più compatto)
         bet_info = self.card_counter.get_bet_multiplier()
         
-        bet_text = f"💰 {bet_info['description']}"
-        
         if bet_info['action'] == 'LEAVE':
-            bet_color = '#ff4444'  # Rosso
-            bet_text += "\n🚪 Situazione sfavorevole - Considera di lasciare il tavolo"
+            bet_text = f"🚪 {bet_info['bet_amount']:.0f}€ (ESCI!)"
+            bet_color = '#ff4444'
         elif bet_info['action'] == 'MIN_BET':
-            bet_color = '#ffaa00'  # Arancione
+            bet_text = f"{bet_info['bet_amount']:.0f}€ (minimo)"
+            bet_color = '#ffaa00'
         else:  # BET
-            bet_color = '#00ff00'  # Verde
-            bet_text += "\n⚡ Situazione favorevole!"
+            bet_text = f"{bet_info['bet_amount']:.0f}€ ⚡"
+            bet_color = '#00ff00'
         
         self.bet_suggestion_label.config(text=bet_text, fg=bet_color)
         
     def update_suggestion(self):
-        if not self.dealer_card or not self.player_cards:
+        if not self.dealer_card:
+            return
+            
+        # Determina quale mano usare per il suggerimento
+        if self.is_split_hand:
+            if self.current_split_hand == 1:
+                active_hand = self.player_cards
+            else:
+                active_hand = self.player_cards_split
+        else:
+            active_hand = self.player_cards
+        
+        if not active_hand:
             return
         
-        player_total, is_soft = self.calculate_hand_value(self.player_cards)
+        player_total, is_soft = self.calculate_hand_value(active_hand)
         true_count = self.card_counter.get_true_count()
         
         # Imposta la puntata corrente se non è ancora stata impostata
@@ -988,12 +786,12 @@ class BlackjackAssistant:
             bet_info = self.card_counter.get_bet_multiplier()
             self.current_bet = bet_info['bet_amount']
             self.current_bet_label.config(
-                text=f"Puntata Corrente: {self.current_bet:.0f}€",
+                text=f"Puntata: {self.current_bet:.0f}€",
                 fg='#00ff00'
             )
         
         # Verifica se è una coppia
-        is_pair = len(self.player_cards) == 2 and self.player_cards[0] == self.player_cards[1]
+        is_pair = len(active_hand) == 2 and active_hand[0] == active_hand[1]
         
         suggestion = self.strategy.get_suggestion(
             player_total,
@@ -1013,29 +811,42 @@ class BlackjackAssistant:
         }
         
         emoji = action_emoji.get(suggestion['action'], '❓')
-        text = f"{emoji} {suggestion['action']}\n\n{suggestion['description']}"
         
-        # Colora in base al true count
-        if true_count >= 2:
-            text += f"\n\n⚡ True Count alto (+{true_count:.1f}) - Situazione favorevole!"
-        elif true_count <= -2:
-            text += f"\n\n⚠️ True Count basso ({true_count:.1f}) - Cautela!"
+        # Testo compatto per mobile
+        text = f"{emoji} {suggestion['action']}"
+        
+        # Aggiungi solo descrizione essenziale
+        if suggestion['action'] == 'DOUBLE':
+            text += "\n(altrimenti HIT)"
+        elif suggestion['action'] == 'SURRENDER':
+            text += "\n(altrimenti HIT)"
+        elif suggestion['action'] == 'SPLIT':
+            text += "\nDividi coppia"
             
         self.strategy_label.config(text=text)
         
     def new_hand(self):
         self.player_cards = []
+        self.player_cards_split = []
+        self.is_split_hand = False
+        self.current_split_hand = 1
         self.dealer_card = None
+        self.dealer_cards = []
         self.other_players_cards = []
         self.current_bet = 0
-        self.dealer_display.config(text="❓")
+        
+        # Nascondi UI split
+        self.split_frame.pack_forget()
+        self.player_split_total_label.pack_forget()
+        self.switch_hand_btn.pack_forget()
+        self.activate_split_btn.pack_forget()
+        
+        self.update_dealer_display()
         self.update_player_display()
         self.update_other_players_display()
         self.selection_mode.set('dealer')
-        self.current_bet_label.config(text="Puntata Corrente: Non impostata", fg='#ffaa00')
-        self.strategy_label.config(
-            text="Seleziona 'Carta Banco' e clicca sulla carta del dealer\nPoi seleziona 'Le Mie Carte' e clicca sulle tue carte"
-        )
+        self.current_bet_label.config(text="Puntata: -", fg='#ffd700')
+        self.strategy_label.config(text="Aspetto carte...")
 
 
 def main():
