@@ -42,6 +42,9 @@ class BlackjackAssistant:
         self.is_split_hand = False  # Flag per indicare se è una mano splittata
         self.current_split_hand = 1  # 1 o 2 - quale mano stiamo giocando
         
+        # Tracciamento per undo
+        self.last_operation = None  # {'type': 'dealer'|'player'|'player_split'|'table', 'card': 'A'}
+        
         # Modalità selezione: 'dealer', 'player', 'table'
         self.selection_mode = tk.StringVar(value='dealer')
         
@@ -205,6 +208,22 @@ class BlackjackAssistant:
             font=("Arial", 9, "bold"), bg='#5d532e', fg='#fff', selectcolor='#7d6f3e',
             activebackground='#5d532e', indicatoron=0, width=11, padx=5, pady=8
         ).pack(side='left', padx=2)
+        
+        # Bottone Annulla
+        self.undo_btn = tk.Button(
+            mode_card,
+            text="↩️ ANNULLA",
+            command=self.undo_last_card,
+            bg='#7d4e2e',
+            fg='#ffffff',
+            font=("Arial", 10, "bold"),
+            padx=15,
+            pady=8,
+            relief='raised',
+            bd=2,
+            state='disabled'
+        )
+        self.undo_btn.pack(pady=(5, 8))
         
         # Griglia carte compatta e touch-friendly
         cards_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
@@ -458,6 +477,10 @@ class BlackjackAssistant:
         else:
             self.dealer_cards.append(card)
         
+        # Traccia operazione per undo
+        self.last_operation = {'type': 'dealer', 'card': card}
+        self.undo_btn.config(state='normal')
+        
         self.update_dealer_display()
         self.card_counter.add_card(card)
         self.update_count_display()
@@ -475,13 +498,64 @@ class BlackjackAssistant:
         """Aggiungi una carta al giocatore"""
         if self.is_split_hand and self.current_split_hand == 2:
             self.player_cards_split.append(card)
+            # Traccia operazione per undo
+            self.last_operation = {'type': 'player_split', 'card': card}
         else:
             self.player_cards.append(card)
+            # Traccia operazione per undo
+            self.last_operation = {'type': 'player', 'card': card}
+        
+        self.undo_btn.config(state='normal')
             
         self.card_counter.add_card(card)
         self.update_player_display()
         self.update_count_display()
         self.update_suggestion()
+    
+    def add_table_card_direct(self, card):
+        """Aggiungi una carta vista al tavolo (non del giocatore)"""
+        self.other_players_cards.append(card)
+        
+        # Traccia operazione per undo
+        self.last_operation = {'type': 'table', 'card': card}
+        self.undo_btn.config(state='normal')
+        
+        self.card_counter.add_card(card)
+        self.update_count_display()
+        self.update_other_players_display()
+    
+    def undo_last_card(self):
+        """Annulla l'ultima carta inserita"""
+        if not self.last_operation:
+            return
+        
+        op_type = self.last_operation['type']
+        card = self.last_operation['card']
+        
+        # Rimuovi carta dalla lista appropriata
+        if op_type == 'dealer' and self.dealer_cards:
+            self.dealer_cards.pop()
+            if not self.dealer_cards:
+                self.dealer_card = None
+            self.update_dealer_display()
+        elif op_type == 'player' and self.player_cards:
+            self.player_cards.pop()
+            self.update_player_display()
+        elif op_type == 'player_split' and self.player_cards_split:
+            self.player_cards_split.pop()
+            self.update_player_display()
+        elif op_type == 'table' and self.other_players_cards:
+            self.other_players_cards.pop()
+            self.update_other_players_display()
+        
+        # Sottrai carta dal conteggio
+        self.card_counter.remove_card(card)
+        self.update_count_display()
+        self.update_suggestion()
+        
+        # Reset undo
+        self.last_operation = None
+        self.undo_btn.config(state='disabled')
     
     def activate_split(self):
         """Attiva modalità split"""
@@ -514,6 +588,11 @@ class BlackjackAssistant:
     def add_table_card_direct(self, card):
         """Aggiungi una carta vista al tavolo (non del giocatore)"""
         self.other_players_cards.append(card)
+        
+        # Traccia operazione per undo
+        self.last_operation = {'type': 'table', 'card': card}
+        self.undo_btn.config(state='normal')
+        
         self.card_counter.add_card(card)
         self.update_count_display()
         self.update_other_players_display()
@@ -834,12 +913,16 @@ class BlackjackAssistant:
         self.dealer_cards = []
         self.other_players_cards = []
         self.current_bet = 0
+        self.last_operation = None
         
         # Nascondi UI split
         self.split_frame.pack_forget()
         self.player_split_total_label.pack_forget()
         self.switch_hand_btn.pack_forget()
         self.activate_split_btn.pack_forget()
+        
+        # Disabilita bottone annulla
+        self.undo_btn.config(state='disabled')
         
         self.update_dealer_display()
         self.update_player_display()

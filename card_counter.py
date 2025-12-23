@@ -126,6 +126,21 @@ class CardCounter:
         # Traccia la carta uscita
         if card in self.cards_by_value:
             self.cards_by_value[card] += 1
+    
+    def remove_card(self, card):
+        """
+        Rimuovi una carta dal conteggio (per undo)
+        
+        Args:
+            card: stringa rappresentante la carta ('A', '2'-'10', 'J', 'Q', 'K')
+        """
+        value = self._get_card_value(card)
+        self.running_count -= value
+        self.cards_seen -= 1
+        
+        # Rimuovi tracciamento carta
+        if card in self.cards_by_value and self.cards_by_value[card] > 0:
+            self.cards_by_value[card] -= 1
         
     def _get_card_value(self, card):
         """
