@@ -220,6 +220,8 @@ class BlackjackStrategy:
             }
         
         action = None
+        pair_card = None
+        adjusted_split = False
         
         # Controlla prima se è una coppia (solo con 2 carte)
         if is_pair:
@@ -234,6 +236,9 @@ class BlackjackStrategy:
                 
             key = (pair_card, dealer_card)
             action = self.pair_strategy.get(key, 'HIT')
+            
+            # Applica deviazioni di split basate sul True Count
+            action, adjusted_split = self._adjust_split_for_count(action, pair_card, dealer_card, true_count)
         
         # Se non è coppia o non abbiamo split, usa strategia soft/hard
         if not action or action not in ['SPLIT']:
@@ -244,8 +249,11 @@ class BlackjackStrategy:
                 key = (player_total, dealer_card)
                 action = self.hard_strategy.get(key, 'HIT')
         
-        # Aggiustamenti basati sul True Count
+        # Aggiustamenti basati sul True Count (per non-split)
         action, adjusted = self._adjust_for_count(action, player_total, dealer_card, true_count, is_soft)
+        
+        # Combina gli adjusted flags
+        adjusted = adjusted or adjusted_split
         
         # Genera descrizione
         description = self._get_action_description(action, player_total, dealer_card, adjusted, true_count)
@@ -254,45 +262,205 @@ class BlackjackStrategy:
             'action': action,
             'description': description
         }
-        
-    def _adjust_for_count(self, action, player_total, dealer_card, true_count, is_soft):
+    
+    def _adjust_split_for_count(self, action, pair_card, dealer_card, true_count):
         """
-        Aggiusta la strategia in base al True Count
+        Aggiusta la strategia di split in base al True Count
+        Basato sulla tabella "SPLITTARE" delle deviazioni europee
         
         Returns:
             tuple: (action, adjusted) dove adjusted è True se la strategia è stata modificata
         """
         adjusted = False
         
-        # Con True Count alto (>= 2), sii più aggressivo
-        if true_count >= 2:
-            # Assicura 16 contro 10 con TC >= 0 (già implementato come HIT)
-            # Assicura 15 contro 10 con TC >= 4
-            if player_total == 15 and dealer_card == '10' and true_count >= 4 and not is_soft:
+        # 10,10 (T,T) vs 4: Split con TC >= 6+
+        if pair_card == '10' and dealer_card == '4' and true_count >= 6:
+            action = 'SPLIT'
+            adjusted = True
+        
+        # 10,10 (T,T) vs 5: Split con TC >= 5+
+        if pair_card == '10' and dealer_card == '5' and true_count >= 5:
+            action = 'SPLIT'
+            adjusted = True
+        
+        # 10,10 (T,T) vs 6: Split con TC >= 4+
+        if pair_card == '10' and dealer_card == '6' and true_count >= 4:
+            action = 'SPLIT'
+            adjusted = True
+        
+        # 9,9 vs 7: Split con TC >= 6+ (solo se il raddoppio dopo lo split è permesso)
+        if pair_card == '9' and dealer_card == '7' and true_count >= 6:
+            # Nota: nella strategia base è "N" (non splittare)
+            # Con TC >= 6+ diventa "Y" (split)
+            action = 'SPLIT'
+            adjusted = True
+        
+        # 4,4 vs 5: Split se il raddoppio dopo lo split è permesso, altrimenti non farlo
+        # Con TC: Y/N con TC >= Y/N (condizionale al raddoppio dopo split)
+        if pair_card == '4' and dealer_card == '5':
+            # Nella strategia base italiana, di solito il raddoppio dopo split è permesso
+            # quindi potrebbe già essere Y. Non facciamo deviazioni specifiche.
+            pass
+        
+        # 4,4 vs 6: Split se il raddoppio dopo lo split è permesso
+        if pair_card == '4' and dealer_card == '6':
+            # Simile a sopra
+            pass
+        
+        # 6,6 vs 2: Split se il raddoppio dopo lo split è permesso con TC >= Y/N
+        if pair_card == '6' and dealer_card == '2':
+            # Nella strategia base europea, 6,6 vs 2 è già split
+            # quindi non serve deviazione
+            pass
+        
+        # 3,3 e 2,2 seguono regole simili ma sono già nella strategia base
+        
+        return action, adjusted
+        
+    def _adjust_for_count(self, action, player_total, dealer_card, true_count, is_soft):
+        """
+        Aggiusta la strategia in base al True Count (Deviazioni Europee)
+        
+        Returns:
+            tuple: (action, adjusted) dove adjusted è True se la strategia è stata modificata
+        """
+        adjusted = False
+        
+        # Solo per mani hard (non soft)
+        if not is_soft:
+            # ===== SURRENDER (RESA) =====
+            # 16 vs 9: Arrenditi con TC >= 4+
+            if player_total == 16 and dealer_card == '9' and true_count >= 4:
                 action = 'SURRENDER'
                 adjusted = True
             
-            # Raddoppia 10 contro 10 e A con TC alto
-            if player_total == 10 and dealer_card in ['10', 'A'] and true_count >= 4:
-                action = 'DOUBLE'
+            # 16 vs 10: Arrenditi con TC >= 0+
+            if player_total == 16 and dealer_card == '10' and true_count >= 0:
+                action = 'SURRENDER'
+                adjusted = True
+            
+            # 16 vs A: Arrenditi sempre (strategia di base)
+            if player_total == 16 and dealer_card == 'A':
+                action = 'SURRENDER'
                 adjusted = True
                 
-            # Raddoppia 11 sempre con TC alto
-            if player_total == 11 and true_count >= 1:
-                action = 'DOUBLE'
+            # 15 vs 9: Arrenditi con TC >= 2+
+            if player_total == 15 and dealer_card == '9' and true_count >= 2:
+                action = 'SURRENDER'
                 adjusted = True
+            
+            # 15 vs 10: Arrenditi con TC >= -1
+            if player_total == 15 and dealer_card == '10' and true_count >= -1:
+                action = 'SURRENDER'
+                adjusted = True
+            
+            # 15 vs A: Arrenditi con TC >= -1
+            if player_total == 15 and dealer_card == 'A' and true_count >= -1:
+                action = 'SURRENDER'
+                adjusted = True
+            
+            # ===== DEVIAZIONI STRATEGIA BASE (COPPIE PURE) =====
+            
+            # 17 vs A: Stand (sempre)
+            # Nessuna deviazione
+            
+            # 16 vs 7: Stand con TC >= 4+
+            if player_total == 16 and dealer_card == '7' and true_count >= 4:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+            
+            # 16 vs 8: Stand con TC >= 4+
+            if player_total == 16 and dealer_card == '8' and true_count >= 4:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+                    
+            # 15 vs 7: Stand con TC >= 3+
+            if player_total == 15 and dealer_card == '7' and true_count >= 3:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+            
+            # 13 vs 2: Stand con TC >= -1
+            if player_total == 13 and dealer_card == '2' and true_count >= -1:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+            
+            # 12 vs 2: Stand con TC >= 3+
+            if player_total == 12 and dealer_card == '2' and true_count >= 3:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+                    
+            # 12 vs 3: Stand con TC >= 2+
+            if player_total == 12 and dealer_card == '3' and true_count >= 2:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+            
+            # 12 vs 4: Stand con TC >= 0
+            if player_total == 12 and dealer_card == '4' and true_count >= 0:
+                if action == 'HIT':
+                    action = 'STAND'
+                    adjusted = True
+            
+            # 11 vs A: Raddoppia con TC >= 4+
+            if player_total == 11 and dealer_card == 'A' and true_count >= 4:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # 10 vs 10: Raddoppia con TC >= 1+
+            if player_total == 10 and dealer_card == '10' and true_count >= 1:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
+                    
+            # 10 vs A: Raddoppia con TC >= 1+
+            if player_total == 10 and dealer_card == 'A' and true_count >= 1:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # 9 vs 2: Raddoppia con TC >= 1+
+            if player_total == 9 and dealer_card == '2' and true_count >= 1:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # 9 vs 7: Raddoppia con TC >= 3+
+            if player_total == 9 and dealer_card == '7' and true_count >= 3:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
         
-        # Con True Count basso (<= -2), sii più conservativo
-        elif true_count <= -2:
-            # Non raddoppiare con TC basso
-            if action == 'DOUBLE' and true_count <= -1:
-                action = 'HIT'
-                adjusted = True
-                
-            # Stand su 12 contro 4-6 solo con TC neutro o positivo
-            if player_total == 12 and dealer_card in ['4', '5', '6'] and true_count < 0:
-                action = 'HIT'
-                adjusted = True
+        # ===== DEVIAZIONI PER COPPIE CON ASSO =====
+        else:  # is_soft = True
+            # A,8 vs 4: Raddoppia con TC >= 3+
+            if player_total == 19 and dealer_card == '4' and true_count >= 3:
+                if action == 'STAND':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # A,8 vs 5: Raddoppia con TC >= 1+
+            if player_total == 19 and dealer_card == '5' and true_count >= 1:
+                if action == 'STAND':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # A,8 vs 6: Raddoppia con TC >= 4+
+            if player_total == 19 and dealer_card == '6' and true_count >= 4:
+                if action == 'STAND':
+                    action = 'DOUBLE'
+                    adjusted = True
+            
+            # A,6 vs 2: Raddoppia con TC >= 1+
+            if player_total == 17 and dealer_card == '2' and true_count >= 1:
+                if action == 'HIT':
+                    action = 'DOUBLE'
+                    adjusted = True
         
         return action, adjusted
         
