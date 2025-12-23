@@ -1,0 +1,10 @@
+# Requirements per Blackjack Assistant
+# Python 3.7 o superiore
+
+# Tkinter è incluso in Python standard library
+# Non servono librerie esterne per la versione base
+
+# Opzionali per sviluppo futuro:
+# matplotlib>=3.5.0  # Per grafici e statistiche
+# numpy>=1.21.0      # Per analisi dati avanzate
+# pillow>=9.0.0      # Per migliorare la grafica
