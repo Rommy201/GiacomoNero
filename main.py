@@ -337,7 +337,22 @@ class BlackjackAssistant:
         result_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
         result_card.pack(fill='x', padx=5, pady=3)
         
-        tk.Label(result_card, text="🎲 RISULTATO", font=("Arial", 9, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(4, 2))
+        tk.Label(result_card, text="🎲 RISULTATO", font=("Arial", 9, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(3, 2))
+        
+        # Input puntata effettiva
+        bet_input_frame = tk.Frame(result_card, bg='#1a1f3a')
+        bet_input_frame.pack(pady=(0, 3))
+        
+        tk.Label(bet_input_frame, text="Puntata €:", font=("Arial", 8), bg='#1a1f3a', fg='#aaa').pack(side='left', padx=(0, 3))
+        self.actual_bet_var = tk.StringVar(value="10")
+        self.actual_bet_entry = tk.Entry(
+            bet_input_frame,
+            textvariable=self.actual_bet_var,
+            width=6,
+            font=("Arial", 9),
+            justify='center'
+        )
+        self.actual_bet_entry.pack(side='left')
         
         res_grid1 = tk.Frame(result_card, bg='#1a1f3a')
         res_grid1.pack(pady=2)
@@ -345,18 +360,14 @@ class BlackjackAssistant:
         self.create_result_button(res_grid1, "✅", "win", '#2d5f2e', 0, 0)
         self.create_result_button(res_grid1, "❌", "loss", '#7d2e2e', 0, 1)
         self.create_result_button(res_grid1, "➖", "push", '#3a3a5f', 0, 2)
+        self.create_result_button(res_grid1, "⭐", "blackjack", '#7d5f2e', 0, 3)
         
         res_grid2 = tk.Frame(result_card, bg='#1a1f3a')
         res_grid2.pack(pady=2)
         
-        self.create_result_button(res_grid2, "⭐", "blackjack", '#7d5f2e', 0, 0)
-        self.create_result_button(res_grid2, "2xW", "double_win", '#2d5f2e', 0, 1)
-        self.create_result_button(res_grid2, "2xL", "double_loss", '#7d2e2e', 0, 2)
-        
-        res_grid3 = tk.Frame(result_card, bg='#1a1f3a')
-        res_grid3.pack(pady=2)
-        
-        self.create_result_button(res_grid3, "🏳️", "surrender", '#5f5a77', 0, 0)
+        self.create_result_button(res_grid2, "2xW", "double_win", '#2d5f2e', 0, 0)
+        self.create_result_button(res_grid2, "2xL", "double_loss", '#7d2e2e', 0, 1)
+        self.create_result_button(res_grid2, "🏳️", "surrender", '#5f5a77', 0, 2)
         
         # Pack canvas e scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -433,8 +444,8 @@ class BlackjackAssistant:
             command=lambda: self.record_result(result),
             bg=color,
             fg='#ffffff',
-            font=("Arial", 10, "bold"),
-            width=10,
+            font=("Arial", 9, "bold"),
+            width=8,
             height=1,
             relief='raised',
             bd=2
@@ -639,23 +650,31 @@ class BlackjackAssistant:
     
     def record_result(self, result):
         """Registra il risultato della mano"""
-        if self.current_bet == 0:
-            messagebox.showwarning("Attenzione", "Nessuna puntata impostata per questa mano!\nLa puntata viene impostata automaticamente quando selezioni le carte.")
+        # Usa la puntata inserita dall'utente
+        try:
+            actual_bet = float(self.actual_bet_var.get())
+            if actual_bet <= 0:
+                messagebox.showerror("Errore", "La puntata deve essere maggiore di 0")
+                return
+        except ValueError:
+            messagebox.showerror("Errore", "Inserisci un valore numerico valido per la puntata")
             return
         
         # Registra il risultato
-        self.card_counter.record_hand_result(result, self.current_bet)
+        self.card_counter.record_hand_result(result, actual_bet)
         
         # Mostra messaggio di conferma
         result_messages = {
-            'win': f"Vittoria! +{self.current_bet:.0f}€",
-            'loss': f"Sconfitta. -{self.current_bet:.0f}€",
+            'win': f"Vittoria! +{actual_bet:.0f}€",
+            'loss': f"Sconfitta. -{actual_bet:.0f}€",
             'push': "Pareggio. Puntata restituita",
-            'blackjack': f"BLACKJACK! +{self.current_bet * 1.5:.0f}€",
-            'double_win': f"Raddoppio vinto! +{self.current_bet * 2:.0f}€",
-            'double_loss': f"Raddoppio perso. -{self.current_bet * 2:.0f}€",
-            'surrender': f"Arresa. -{self.current_bet * 0.5:.0f}€"
+            'blackjack': f"BLACKJACK! +{actual_bet * 1.5:.0f}€",
+            'double_win': f"Raddoppio vinto! +{actual_bet * 2:.0f}€",
+            'double_loss': f"Raddoppio perso. -{actual_bet * 2:.0f}€",
+            'surrender': f"Arresa. -{actual_bet * 0.5:.0f}€"
         }
+        
+        messagebox.showinfo("Risultato", result_messages.get(result, "Risultato registrato"))
         
         # Aggiorna display
         self.update_count_display()
@@ -859,6 +878,8 @@ class BlackjackAssistant:
         if self.current_bet == 0:
             bet_info = self.card_counter.get_bet_multiplier()
             self.current_bet = bet_info['bet_amount']
+            # Aggiorna il campo input con la puntata suggerita
+            self.actual_bet_var.set(f"{self.current_bet:.0f}")
         
         # Verifica se è una coppia
         is_pair = len(active_hand) == 2 and active_hand[0] == active_hand[1]
