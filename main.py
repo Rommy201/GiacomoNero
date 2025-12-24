@@ -502,7 +502,9 @@ class BlackjackAssistant:
         bet_input_frame.pack(pady=(0, 3))
         
         tk.Label(bet_input_frame, text="Puntata €:", font=("Segoe UI", 8), bg='#1e2433', fg='#a0aec0').pack(side='left', padx=(0, 3))
-        self.actual_bet_var = tk.StringVar(value="10")
+        # Inizializza con la puntata suggerita dal sistema
+        initial_bet = self.card_counter.get_bet_multiplier()['bet_amount']
+        self.actual_bet_var = tk.StringVar(value=f"{initial_bet:.0f}")
         self.actual_bet_entry = tk.Entry(
             bet_input_frame,
             textvariable=self.actual_bet_var,
