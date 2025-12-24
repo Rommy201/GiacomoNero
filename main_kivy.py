@@ -1,5 +1,6 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -7,6 +8,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
+from kivy.uix.widget import Widget
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle
@@ -55,19 +57,21 @@ class ToastWidget(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint = (None, None)
-        self.size = (350, 50)
-        self.pos_hint = {'center_x': 0.5, 'top': 0.95}
+        self.size = (360, 55)
+        self.pos_hint = {'center_x': 0.5, 'top': 0.96}
         
         with self.canvas.before:
-            Color(0.2, 0.2, 0.2, 0.95)
-            self.bg = Rectangle(pos=self.pos, size=self.size)
+            Color(0.078, 0.106, 0.176, 0.98)  # #141B2D con alpha
+            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[15])
         
         self.bind(pos=self._update_bg, size=self._update_bg)
         
         label = Label(
             text=message,
             color=(1, 1, 1, 1),
-            font_size='14sp'
+            font_size='14sp',
+            bold=True,
+            markup=True
         )
         self.add_widget(label)
     
@@ -116,8 +120,11 @@ class BlackjackApp(App):
         self.is_split_hand = False
         self.current_split_hand = 1  # 1 o 2
         
-        # Container principale
-        root = BoxLayout(orientation='vertical', padding=0, spacing=0)
+        # Container principale - FloatLayout per supportare toast
+        root = FloatLayout()
+        
+        # BoxLayout per il contenuto principale
+        content = BoxLayout(orientation='vertical', padding=0, spacing=0, size_hint=(1, 1))
         
         # === HEADER FISSO CON BOTTONE SETUP ===
         header = BoxLayout(
@@ -155,7 +162,7 @@ class BlackjackApp(App):
         
         header.add_widget(title)
         header.add_widget(setup_btn)
-        root.add_widget(header)
+        content.add_widget(header)
         
         # ScrollView per il contenuto
         scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False)
@@ -207,10 +214,18 @@ class BlackjackApp(App):
             halign='center'
         )
         
+        self.decks_label = Label(
+            text='🃏 [b]6.0[/b] mazzi',
+            markup=True,
+            color=(0.965, 0.616, 0.043, 1),
+            font_size='12sp',
+            halign='center'
+        )
+        
         counters_row.add_widget(self.rc_label)
         counters_row.add_widget(self.tc_label)
         counters_row.add_widget(self.cards_label)
-        counters_row.add_widget(self.viste_label)
+        counters_row.add_widget(self.decks_label)
         
         # Seconda riga: Bankroll e profitto
         bankroll_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=26, spacing=8)
@@ -251,30 +266,32 @@ class BlackjackApp(App):
         bankroll_row.add_widget(self.profit_label)
         bankroll_row.add_widget(self.suggested_bet_label)
         
-        # Terza riga: Statistiche
-        stats_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=18, spacing=10)
+        # Terza riga: Riepilogo mani
+        stats_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=20, spacing=4)
         
-        self.hands_label = Label(
-            text='0 mani',
+        self.hands_summary_label = Label(
+            text='Mani: [color=10B981]✓0[/color] | [color=EF4444]✗0[/color] | [color=9895F3]=0[/color]',
+            markup=True,
             color=(0.7, 0.7, 0.7, 1),
             font_size='11sp',
             halign='left',
-            valign='middle'
+            valign='middle',
+            size_hint_x=0.7
         )
-        self.hands_label.bind(size=self.hands_label.setter('text_size'))
+        self.hands_summary_label.bind(size=self.hands_summary_label.setter('text_size'))
         
         self.winrate_label = Label(
-            text='0% WR',
+            text='WR: 0%',
             color=(0.7, 0.7, 0.7, 1),
             font_size='11sp',
-            halign='left',
-            valign='middle'
+            halign='right',
+            valign='middle',
+            size_hint_x=0.3
         )
         self.winrate_label.bind(size=self.winrate_label.setter('text_size'))
         
-        stats_row.add_widget(self.hands_label)
+        stats_row.add_widget(self.hands_summary_label)
         stats_row.add_widget(self.winrate_label)
-        stats_row.add_widget(Label())  # spacer
         
         count_section.add_widget(counters_row)
         count_section.add_widget(bankroll_row)
@@ -408,10 +425,13 @@ class BlackjackApp(App):
             text='[b]MANO[/b]',
             markup=True,
             color=(0.28, 0.73, 0.44, 1),
-            font_size='10sp',
+            font_size='11sp',
             size_hint_y=None,
-            height=18
+            height=20,
+            halign='center',
+            valign='top'
         )
+        hand_title.bind(size=hand_title.setter('text_size'))
         
         self.dealer_label = Label(
             text='Banco: -',
@@ -516,8 +536,11 @@ class BlackjackApp(App):
             color=(0.96, 0.68, 0.35, 1),
             font_size='11sp',
             size_hint_y=None,
-            height=20
+            height=20,
+            halign='center',
+            valign='top'
         )
+        action_title.bind(size=action_title.setter('text_size'))
         
         self.strategy_label = Label(
             text='Inserisci carte',
@@ -529,6 +552,10 @@ class BlackjackApp(App):
         )
         self.strategy_label.bind(size=self.strategy_label.setter('text_size'))
         
+        # Spacer per abbassare action_title e allinearlo con hand_title
+        action_spacer = Widget(size_hint_y=None, height=8)
+        
+        action_box.add_widget(action_spacer)
         action_box.add_widget(action_title)
         action_box.add_widget(self.strategy_label)
         
@@ -540,18 +567,18 @@ class BlackjackApp(App):
         results_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=165,
+            height=159,
             padding=[10, 12, 10, 10],
             spacing=8
         )
         
         # Input scommessa
-        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=38, spacing=6, padding=[0, 0])
+        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=32, spacing=6, padding=[0, 0])
         
         bet_label = Label(
             text='Puntata:',
             color=(0.96, 0.68, 0.35, 1),
-            font_size='13sp',
+            font_size='12sp',
             bold=True,
             size_hint_x=0.28,
             halign='right',
@@ -563,17 +590,18 @@ class BlackjackApp(App):
         self.bet_input = TextInput(
             text=f'{initial_bet:.0f}€',
             multiline=False,
-            font_size='15sp',
-            size_hint_x=0.72,
+            font_size='13sp',
+            size_hint_x=0.55,
             background_color=(0.146, 0.168, 0.231, 1),
             foreground_color=(1, 1, 1, 1),
             cursor_color=(0.3, 0.8, 0.77, 1),
-            padding=[12, 8],
+            padding=[10, 6],
             halign='center'
         )
         
         bet_input_box.add_widget(bet_label)
         bet_input_box.add_widget(self.bet_input)
+        bet_input_box.add_widget(Label(size_hint_x=0.17))  # Spacer
         
         # Bottoni risultato
         row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=38)
@@ -673,8 +701,14 @@ class BlackjackApp(App):
         results_section.add_widget(row2)
         main_layout.add_widget(results_section)
         
-        # Aggiungi scroll al root
-        root.add_widget(scroll)
+        # Aggiungi scroll al content
+        content.add_widget(scroll)
+        
+        # Aggiungi content al root FloatLayout
+        root.add_widget(content)
+        
+        # Salva riferimento al root per i toast
+        self.root = root
         
         # Inizializza gli input del setup (creati nel popup)
         self.decks_input = None
@@ -741,9 +775,9 @@ class BlackjackApp(App):
             font_size='12sp',
             size_hint_x=0.45
         )
-        current_bankroll = getattr(self.card_counter, 'current_bankroll', getattr(self.card_counter, 'bankroll', 1000))
+        initial_bankroll = getattr(self.card_counter, 'initial_bankroll', 100)
         self.bankroll_input = TextInput(
-            text=f'{current_bankroll:.0f}',
+            text=f'{initial_bankroll:.0f}',
             multiline=False,
             font_size='13sp',
             size_hint_x=0.55,
@@ -763,8 +797,9 @@ class BlackjackApp(App):
             font_size='12sp',
             size_hint_x=0.45
         )
+        table_minimum = getattr(self.card_counter, 'table_minimum', 5)
         self.min_bet_input = TextInput(
-            text='10',
+            text=f'{table_minimum:.0f}',
             multiline=False,
             font_size='13sp',
             size_hint_x=0.55,
@@ -795,7 +830,25 @@ class BlackjackApp(App):
         content.add_widget(set_table_btn)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.15))
+        content.add_widget(Label(size_hint_y=0.1))
+        
+        # Bottone reset mano corrente
+        reset_hand_btn = Button(
+            text='↺ RESET MANO',
+            background_color=(0.965, 0.616, 0.043, 1),  # Amber
+            background_normal='',
+            color=(0.039, 0.055, 0.102, 1),  # Dark text
+            font_size='12sp',
+            bold=True,
+            size_hint_y=None,
+            height=45
+        )
+        reset_hand_btn.bind(on_press=lambda x: self.reset_current_hand())
+        self.make_rounded_button(reset_hand_btn, radius=10)
+        content.add_widget(reset_hand_btn)
+        
+        # Spazio
+        content.add_widget(Label(size_hint_y=0.1))
         
         # Bottoni azioni
         actions_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=45, spacing=8)
@@ -847,6 +900,9 @@ class BlackjackApp(App):
             background_color=(0.059, 0.078, 0.098, 1),
             separator_color=(0.3, 0.8, 0.77, 1)
         )
+        
+        # Salva riferimento al popup per chiuderlo dalle azioni
+        self.setup_popup = popup
         
         close_btn.bind(on_press=popup.dismiss)
         content.add_widget(close_btn)
@@ -971,7 +1027,12 @@ class BlackjackApp(App):
         cards_remaining = self.card_counter.get_cards_remaining()
         cards_seen = self.card_counter.cards_seen
         self.cards_label.text = f'[b]{cards_remaining}[/b] carte'
-        self.viste_label.text = f'[b]{cards_seen}[/b] viste'
+        
+        # Mazzi rimanenti
+        decks_remaining = getattr(self.card_counter, 'decks_remaining', 6)
+        decks_used = cards_seen / 52
+        decks_left = max(decks_remaining - decks_used, 0)
+        self.decks_label.text = f'🃏 [b]{decks_left:.1f}[/b] mazzi'
         
         # Mano
         self.dealer_label.text = f"Banco: {', '.join(self.dealer_cards) if self.dealer_cards else '-'}"
@@ -1034,14 +1095,17 @@ class BlackjackApp(App):
         # Statistiche mani
         hands_played = getattr(self.card_counter, 'hands_played', 0)
         hands_won = getattr(self.card_counter, 'hands_won', 0)
+        hands_lost = getattr(self.card_counter, 'hands_lost', 0)
+        hands_pushed = getattr(self.card_counter, 'hands_pushed', 0)
         
-        self.hands_label.text = f"{hands_played} mani"
+        # Riepilogo mani con colori
+        self.hands_summary_label.text = f'Mani: [color=10B981]✓{hands_won}[/color] | [color=EF4444]✗{hands_lost}[/color] | [color=9895F3]={hands_pushed}[/color]'
         
         if hands_played > 0:
             winrate = (hands_won / hands_played) * 100
-            self.winrate_label.text = f"{winrate:.0f}% WR"
+            self.winrate_label.text = f"WR: {winrate:.0f}%"
         else:
-            self.winrate_label.text = "0% WR"
+            self.winrate_label.text = "WR: 0%"
         
         # Puntata suggerita (con markup)
         bet_info = self.card_counter.get_bet_multiplier()
@@ -1081,32 +1145,33 @@ class BlackjackApp(App):
     def record_result(self, result):
         """Registra risultato"""
         try:
-            bet = float(self.bet_input.text)
+            bet = float(self.bet_input.text.replace('€', '').strip())
         except:
-            self.show_toast("Puntata non valida")
+            self.show_toast("⚠ Puntata non valida")
             return
         
         if result == 'win':
             self.card_counter.record_hand_result('win', bet)
-            self.show_toast("✓ Mano vinta!")
+            self.show_toast(f"✓ Mano vinta! +€{bet:.0f}")
         elif result == 'lose':
             self.card_counter.record_hand_result('loss', bet)
-            self.show_toast("✗ Mano persa")
+            self.show_toast(f"✗ Mano persa. -€{bet:.0f}")
         elif result == 'push':
             self.card_counter.record_hand_result('push', bet)
-            self.show_toast("= Pareggio")
+            self.show_toast("= Pareggio (€0)")
         elif result == 'blackjack':
             self.card_counter.record_hand_result('blackjack', bet)
-            self.show_toast("♠ BLACKJACK! ♠")
+            blackjack_win = bet * 1.5
+            self.show_toast(f"♠ BLACKJACK! +€{blackjack_win:.0f}")
         elif result == 'double_win':
             self.card_counter.record_hand_result('win', bet * 2)
-            self.show_toast(f"💰 Raddoppio vinto! +{bet * 2:.0f}€")
+            self.show_toast(f"💰 Raddoppio vinto! +€{bet * 2:.0f}")
         elif result == 'double_loss':
             self.card_counter.record_hand_result('loss', bet * 2)
-            self.show_toast(f"💸 Raddoppio perso. -{bet * 2:.0f}€")
+            self.show_toast(f"💸 Raddoppio perso. -€{bet * 2:.0f}")
         elif result == 'surrender':
             self.card_counter.record_hand_result('loss', bet * 0.5)
-            self.show_toast(f"🏳️ Arresa. -{bet * 0.5:.0f}€")
+            self.show_toast(f"🏳 Arresa. -€{bet * 0.5:.0f}")
         
         # Reset mani
         self.dealer_cards = []
@@ -1157,8 +1222,32 @@ class BlackjackApp(App):
         
         self.card_counter.set_bankroll(bankroll)
         self.card_counter.set_table_minimum(min_bet)
+        
+        # Reset mani correnti
+        self.dealer_cards = []
+        self.player_cards = []
+        self.player_cards_split = []
+        self.table_cards = []
+        
+        # Reset split
+        self.is_split_hand = False
+        self.current_split_hand = 1
+        if hasattr(self, 'player_split_label'):
+            self.player_split_label.opacity = 0
+            self.player_split_label.height = 0
+        if hasattr(self, 'switch_hand_btn'):
+            self.switch_hand_btn.opacity = 0
+            self.switch_hand_btn.disabled = True
+        if hasattr(self, 'activate_split_btn'):
+            self.activate_split_btn.opacity = 0
+            self.activate_split_btn.disabled = True
+        
         self.update_display()
         self.show_toast(f"✓ Tavolo: Bankroll €{bankroll:.0f}, Min €{min_bet:.0f}")
+        
+        # Chiudi popup setup
+        if hasattr(self, 'setup_popup'):
+            self.setup_popup.dismiss()
     
     def new_shoe(self):
         """Nuova shoe (resetta solo il conteggio, mantiene bankroll)"""
@@ -1178,8 +1267,31 @@ class BlackjackApp(App):
         # Ripristina bankroll
         self.card_counter.current_bankroll = current_bankroll
         
+        # Reset mani correnti
+        self.dealer_cards = []
+        self.player_cards = []
+        self.player_cards_split = []
+        self.table_cards = []
+        
+        # Reset split
+        self.is_split_hand = False
+        self.current_split_hand = 1
+        if hasattr(self, 'player_split_label'):
+            self.player_split_label.opacity = 0
+            self.player_split_label.height = 0
+        if hasattr(self, 'switch_hand_btn'):
+            self.switch_hand_btn.opacity = 0
+            self.switch_hand_btn.disabled = True
+        if hasattr(self, 'activate_split_btn'):
+            self.activate_split_btn.opacity = 0
+            self.activate_split_btn.disabled = True
+        
         self.update_display()
         self.show_toast(f"🃏 Nuova shoe ({decks:.0f} mazzi)")
+        
+        # Chiudi popup setup
+        if hasattr(self, 'setup_popup'):
+            self.setup_popup.dismiss()
     
     def reset_all(self):
         """Reset completo (tutto da zero)"""
@@ -1199,8 +1311,69 @@ class BlackjackApp(App):
         self.card_counter.set_table_minimum(min_bet)
         self.strategy = BlackjackStrategy()
         
+        # Reset mani correnti
+        self.dealer_cards = []
+        self.player_cards = []
+        self.player_cards_split = []
+        self.table_cards = []
+        
+        # Reset split
+        self.is_split_hand = False
+        self.current_split_hand = 1
+        if hasattr(self, 'player_split_label'):
+            self.player_split_label.opacity = 0
+            self.player_split_label.height = 0
+        if hasattr(self, 'switch_hand_btn'):
+            self.switch_hand_btn.opacity = 0
+            self.switch_hand_btn.disabled = True
+        if hasattr(self, 'activate_split_btn'):
+            self.activate_split_btn.opacity = 0
+            self.activate_split_btn.disabled = True
+        
         self.update_display()
         self.show_toast("🔄 Reset completo")
+        
+        # Chiudi popup setup
+        if hasattr(self, 'setup_popup'):
+            self.setup_popup.dismiss()
+    
+    def reset_current_hand(self):
+        """Resetta solo la mano corrente, rimuovendo le carte dal conteggio"""
+        # Rimuovi tutte le carte della mano corrente dal conteggio
+        for card in self.dealer_cards:
+            self.card_counter.remove_card(card)
+        for card in self.player_cards:
+            self.card_counter.remove_card(card)
+        for card in self.player_cards_split:
+            self.card_counter.remove_card(card)
+        for card in self.table_cards:
+            self.card_counter.remove_card(card)
+        
+        # Reset mani correnti
+        self.dealer_cards = []
+        self.player_cards = []
+        self.player_cards_split = []
+        self.table_cards = []
+        
+        # Reset split
+        self.is_split_hand = False
+        self.current_split_hand = 1
+        if hasattr(self, 'player_split_label'):
+            self.player_split_label.opacity = 0
+            self.player_split_label.height = 0
+        if hasattr(self, 'switch_hand_btn'):
+            self.switch_hand_btn.opacity = 0
+            self.switch_hand_btn.disabled = True
+        if hasattr(self, 'activate_split_btn'):
+            self.activate_split_btn.opacity = 0
+            self.activate_split_btn.disabled = True
+        
+        self.update_display()
+        self.show_toast("↺ Mano resettata")
+        
+        # Chiudi popup setup
+        if hasattr(self, 'setup_popup'):
+            self.setup_popup.dismiss()
 
 
 if __name__ == '__main__':
