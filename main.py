@@ -266,22 +266,23 @@ class BlackjackAssistant:
         )
         table_btn.pack(pady=2)
         
-        # Bottone Annulla moderno
+        # Bottone Annulla con stile coerente agli altri
         self.undo_btn = tk.Button(
             mode_column,
-            text="↺",
+            text="↺\nANNULLA",
             command=self.undo_last_card,
             bg='#805ad5',
             fg='#ffffff',
-            font=("Segoe UI", 16, "bold"),
+            font=("Segoe UI", 9, "bold"),
             width=7,
-            padx=3,
-            pady=5,
+            padx=5,
+            pady=8,
             relief='flat',
             bd=0,
             state='disabled',
-            disabledforeground='#718096',
-            cursor='hand2'
+            disabledforeground='#cbd5e0',
+            cursor='hand2',
+            justify='center'
         )
         self.undo_btn.pack(pady=2)
         
