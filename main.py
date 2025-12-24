@@ -50,6 +50,34 @@ class BlackjackAssistant:
         
         self.setup_ui()
         
+    def show_toast(self, message, duration=2000, bg_color='#2d5f2e'):
+        """Mostra una notifica toast temporanea"""
+        toast = tk.Toplevel(self.root)
+        toast.overrideredirect(True)  # Rimuove bordi finestra
+        
+        # Posiziona in alto al centro
+        toast_width = 350
+        toast_height = 60
+        x = (self.root.winfo_x() + self.root.winfo_width() // 2) - (toast_width // 2)
+        y = self.root.winfo_y() + 50
+        toast.geometry(f"{toast_width}x{toast_height}+{x}+{y}")
+        
+        # Stile
+        toast.configure(bg=bg_color)
+        label = tk.Label(
+            toast,
+            text=message,
+            bg=bg_color,
+            fg='#ffffff',
+            font=("Arial", 11, "bold"),
+            wraplength=330,
+            justify='center'
+        )
+        label.pack(expand=True, fill='both', padx=10, pady=10)
+        
+        # Chiudi automaticamente dopo duration millisecondi
+        toast.after(duration, toast.destroy)
+        
     def setup_ui(self):
         # Header compatto
         header = tk.Frame(self.root, bg='#1a1f3a', height=45)
@@ -617,7 +645,7 @@ class BlackjackAssistant:
     def set_decks(self):
         decks = int(self.deck_var.get())
         self.card_counter.set_decks(decks)
-        messagebox.showinfo("Info", f"Impostati {decks} mazzi")
+        self.show_toast(f"Impostati {decks} mazzi", bg_color='#2d5f7d')
     
     def set_bankroll(self):
         try:
@@ -636,9 +664,10 @@ class BlackjackAssistant:
             self.card_counter.set_table_minimum(minimum)
             self.update_count_display()
             
-            messagebox.showinfo(
-                "Info", 
-                f"Bankroll: {bankroll:.0f}€\nMinimo Tavolo: {minimum:.0f}€\nBetting Unit: {self.card_counter.betting_unit:.0f}€"
+            self.show_toast(
+                f"Bankroll: {bankroll:.0f}€ | Min: {minimum:.0f}€ | Unit: {self.card_counter.betting_unit:.0f}€",
+                duration=2500,
+                bg_color='#2d5f7d'
             )
         except ValueError:
             messagebox.showerror("Errore", "Inserisci valori numerici validi")
@@ -646,7 +675,7 @@ class BlackjackAssistant:
     def reset_count(self):
         self.card_counter.reset()
         self.update_count_display()
-        messagebox.showinfo("Info", "Conteggio resettato")
+        self.show_toast("Conteggio resettato", bg_color='#7d4e2e')
     
     def record_result(self, result):
         """Registra il risultato della mano"""
@@ -665,16 +694,31 @@ class BlackjackAssistant:
         
         # Mostra messaggio di conferma
         result_messages = {
-            'win': f"Vittoria! +{actual_bet:.0f}€",
-            'loss': f"Sconfitta. -{actual_bet:.0f}€",
-            'push': "Pareggio. Puntata restituita",
-            'blackjack': f"BLACKJACK! +{actual_bet * 1.5:.0f}€",
-            'double_win': f"Raddoppio vinto! +{actual_bet * 2:.0f}€",
-            'double_loss': f"Raddoppio perso. -{actual_bet * 2:.0f}€",
-            'surrender': f"Arresa. -{actual_bet * 0.5:.0f}€"
+            'win': f"✅ Vittoria! +{actual_bet:.0f}€",
+            'loss': f"❌ Sconfitta. -{actual_bet:.0f}€",
+            'push': f"➖ Pareggio. Puntata restituita",
+            'blackjack': f"⭐ BLACKJACK! +{actual_bet * 1.5:.0f}€",
+            'double_win': f"💰 Raddoppio vinto! +{actual_bet * 2:.0f}€",
+            'double_loss': f"💸 Raddoppio perso. -{actual_bet * 2:.0f}€",
+            'surrender': f"🏳️ Arresa. -{actual_bet * 0.5:.0f}€"
         }
         
-        messagebox.showinfo("Risultato", result_messages.get(result, "Risultato registrato"))
+        # Colori in base al risultato
+        result_colors = {
+            'win': '#2d5f2e',
+            'loss': '#7d2e2e',
+            'push': '#3a3a5f',
+            'blackjack': '#7d5f2e',
+            'double_win': '#2d5f2e',
+            'double_loss': '#7d2e2e',
+            'surrender': '#5f5a77'
+        }
+        
+        self.show_toast(
+            result_messages.get(result, "Risultato registrato"),
+            duration=2500,
+            bg_color=result_colors.get(result, '#2d5f7d')
+        )
         
         # Aggiorna display
         self.update_count_display()
