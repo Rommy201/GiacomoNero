@@ -12,17 +12,23 @@ package.domain = com.blackjack
 # Directory sorgente
 source.dir = .
 
-# Main file
+# Main file (IMPORTANTE: usa main_kivy.py per Android!)
+source.main = main_kivy.py
+
+# Estensioni da includere
 source.include_exts = py,png,jpg,kv,atlas
 
 # Versione
 version = 1.0
 
-# Requisiti Python
-requirements = python3,kivy,kivymd
+# Requisiti Python (versioni automatiche per massima compatibilità)
+requirements = python3,kivy
 
 # Orientamento (portrait = verticale, landscape = orizzontale)
 orientation = portrait
+
+# Permessi (non necessari per questa app, ma utili)
+# android.permissions = 
 
 # Servizi
 # android.permissions = INTERNET
@@ -33,11 +39,11 @@ orientation = portrait
 # Splash screen (opzionale)
 # presplash.filename = %(source.dir)s/presplash.png
 
-# Android API
-android.api = 31
+# Android API (versioni più stabili e compatibili)
+android.api = 33
 android.minapi = 21
 android.ndk = 25b
-android.sdk = 31
+android.accept_sdk_license = True
 
 # Colore del tema
 android.presplash_color = #0f1419
@@ -49,6 +55,13 @@ fullscreen = 0
 
 # Log level
 log_level = 2
+
+# Disabilita ccache (causa problemi con NDK r25b su WSL)
+no_byte_compile_python = False
+
+# Usa versione specifica di python-for-android che funziona
+p4a.branch = master
+p4a.source_dir = /tmp/python-for-android
 
 # Pulisci prima di compilare
 # warn_on_root = 1

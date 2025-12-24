@@ -23,14 +23,15 @@ Riavvia il PC e apri Ubuntu dal menu Start.
 sudo apt update
 sudo apt upgrade -y
 
-# Installa dipendenze
-sudo apt install -y python3-pip git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+# Installa TUTTE le dipendenze necessarie (IMPORTANTE!)
+sudo apt install -y python3-pip git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev build-essential ccache libltdl-dev python3-dev
 
-# Installa Buildozer
-pip3 install buildozer cython
+# Installa Buildozer e Cython
+pip3 install --user buildozer cython
 
-# Installa Android SDK tools
-pip3 install --upgrade buildozer
+# Aggiungi buildozer al PATH
+echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## 3. Copia il Progetto in WSL
@@ -42,6 +43,37 @@ cd "C:\Users\loren\OneDrive\Desktop\Progetti\GiacomoNero"
 
 # Copia tutto in WSL (nella home di Ubuntu)
 wsl cp -r . ~/GiacomoNero/
+```
+
+### 3.1 Aggiornare File dopo Modifiche su Windows
+
+#### Opzione A: Ricopiare tutto (più semplice)
+```powershell
+# Da PowerShell, nella cartella del progetto
+cd "C:\Users\loren\OneDrive\Desktop\Progetti\GiacomoNero"
+wsl rm -rf ~/GiacomoNero
+wsl cp -r . ~/GiacomoNero/
+```
+
+#### Opzione B: Copiare solo i file modificati (più veloce)
+```powershell
+# Copia solo file specifici
+wsl cp main_kivy.py ~/GiacomoNero/
+wsl cp strategy.py ~/GiacomoNero/
+wsl cp buildozer.spec ~/GiacomoNero/
+```
+
+#### Opzione C: Lavorare direttamente sui file WSL da Windows (consigliato!)
+In Esplora Risorse, vai a:
+```
+\\wsl$\Ubuntu\home\<tuo-username>\GiacomoNero
+```
+Puoi modificare i file direttamente lì con VS Code o qualsiasi editor! Le modifiche saranno immediatamente visibili in WSL.
+
+Oppure apri la cartella in VS Code:
+```powershell
+# Apri la cartella WSL direttamente in VS Code
+wsl code ~/GiacomoNero
 ```
 
 ## 4. Compila l'APK
@@ -128,6 +160,37 @@ Avrai bisogno di:
 Il Play Store richiede una privacy policy. Puoi crearla gratis su siti come app-privacy-policy-generator.com
 
 ## Troubleshooting
+
+### Errore "buildozer command not found"
+```bash
+# Aggiungi buildozer al PATH
+export PATH=$PATH:~/.local/bin
+echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
+source ~/.bashrc
+
+# Oppure usa:
+python3 -m buildozer -v android debug
+```
+
+### Errore "Command failed" con python-for-android
+Questo errore è spesso causato da requirements incompatibili. Se vedi un errore con `kivymd`:
+1. Apri `buildozer.spec`
+2. Cambia `requirements = python3,kivy,kivymd` in `requirements = python3,kivy`
+3. Pulisci e ricompila:
+```bash
+buildozer android clean
+buildozer -v android debug
+```
+
+### Errore "C compiler cannot create executables"
+Mancano i tool di compilazione. In WSL esegui:
+```bash
+sudo apt install -y build-essential ccache libltdl-dev python3-dev libffi-dev libssl-dev
+cd ~/GiacomoNero
+buildozer android clean
+rm -rf .buildozer
+buildozer -v android debug
+```
 
 ### Errore "SDK not found"
 Buildozer scarica automaticamente l'SDK Android alla prima compilazione. Sii paziente!
