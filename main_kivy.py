@@ -12,11 +12,14 @@ from kivy.uix.widget import Widget
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.utils import platform
 
 from card_counter import CardCounter
 from strategy import BlackjackStrategy
 
-Window.size = (420, 850)
+# Imposta dimensione solo su desktop, non su Android
+if platform != 'android':
+    Window.size = (420, 850)
 Window.clearcolor = (0.059, 0.078, 0.098, 1)  # #0f1419
 
 
