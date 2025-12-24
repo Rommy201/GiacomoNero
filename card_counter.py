@@ -21,10 +21,10 @@ class CardCounter:
         self._init_card_tracking()
         
         # Gestione bankroll
-        self.initial_bankroll = 1000  # Bankroll iniziale in euro
-        self.current_bankroll = 1000
-        self.table_minimum = 10  # Minimo del tavolo in euro
-        self.betting_unit = 50  # Unità di puntata base
+        self.initial_bankroll = 100  # Bankroll iniziale in euro
+        self.current_bankroll = 100
+        self.table_minimum = 5  # Minimo del tavolo in euro
+        self.betting_unit = 10  # Unità di puntata base
         self.hands_played = 0
         self.hands_won = 0
         self.hands_lost = 0

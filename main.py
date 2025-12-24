@@ -971,6 +971,10 @@ class BlackjackAssistant:
         self.current_bet = 0
         self.last_operation = None
         
+        # Aggiorna il campo puntata con la puntata suggerita per la nuova mano
+        bet_info = self.card_counter.get_bet_multiplier()
+        self.actual_bet_var.set(f"{bet_info['bet_amount']:.0f}")
+        
         # Nascondi UI split
         self.split_frame.pack_forget()
         self.player_split_total_label.pack_forget()
