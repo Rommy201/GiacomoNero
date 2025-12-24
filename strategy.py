@@ -51,7 +51,10 @@ class BlackjackStrategy:
                 
                 # 11: sempre DOUBLE (o HIT se non possibile)
                 elif player_total == 11:
-                    strategy[key] = 'DOUBLE'
+                    if dealer_card in ['2', '3', '4', '5', '6', '7', '8', '9']:
+                        strategy[key] = 'DOUBLE'
+                    else:
+                        strategy[key] = 'HIT'
                 
                 # 10: DOUBLE contro 2-9, HIT contro 10-A
                 elif player_total == 10:
@@ -84,14 +87,21 @@ class BlackjackStrategy:
                 key = (player_total, dealer_card)
                 
                 # Soft 19-21: sempre STAND
-                if player_total >= 19:
+                if player_total >= 20:
                     strategy[key] = 'STAND'
+                
+                #Soft 19: DOUBLE contro 6, STAND altrimenti
+                elif player_total == 19:
+                    if dealer_card == '6':
+                        strategy[key] = 'DOUBLE'
+                    else:
+                        strategy[key] = 'STAND'
                 
                 # Soft 18: DOUBLE contro 3-6, STAND contro 2,7,8, HIT contro 9,10,A
                 elif player_total == 18:
-                    if dealer_card in ['3', '4', '5', '6']:
+                    if dealer_card in ['2', '3', '4', '5', '6']:
                         strategy[key] = 'DOUBLE'
-                    elif dealer_card in ['2', '7', '8']:
+                    elif dealer_card in ['7', '8']:
                         strategy[key] = 'STAND'
                     else:
                         strategy[key] = 'HIT'
@@ -287,34 +297,6 @@ class BlackjackStrategy:
         if pair_card == '10' and dealer_card == '6' and true_count >= 4:
             action = 'SPLIT'
             adjusted = True
-        
-        # 9,9 vs 7: Split con TC >= 6+ (solo se il raddoppio dopo lo split è permesso)
-        if pair_card == '9' and dealer_card == '7' and true_count >= 6:
-            # Nota: nella strategia base è "N" (non splittare)
-            # Con TC >= 6+ diventa "Y" (split)
-            action = 'SPLIT'
-            adjusted = True
-        
-        # 4,4 vs 5: Split se il raddoppio dopo lo split è permesso, altrimenti non farlo
-        # Con TC: Y/N con TC >= Y/N (condizionale al raddoppio dopo split)
-        if pair_card == '4' and dealer_card == '5':
-            # Nella strategia base italiana, di solito il raddoppio dopo split è permesso
-            # quindi potrebbe già essere Y. Non facciamo deviazioni specifiche.
-            pass
-        
-        # 4,4 vs 6: Split se il raddoppio dopo lo split è permesso
-        if pair_card == '4' and dealer_card == '6':
-            # Simile a sopra
-            pass
-        
-        # 6,6 vs 2: Split se il raddoppio dopo lo split è permesso con TC >= Y/N
-        if pair_card == '6' and dealer_card == '2':
-            # Nella strategia base europea, 6,6 vs 2 è già split
-            # quindi non serve deviazione
-            pass
-        
-        # 3,3 e 2,2 seguono regole simili ma sono già nella strategia base
-        
         return action, adjusted
         
     def _adjust_for_count(self, action, player_total, dealer_card, true_count, is_soft):
@@ -329,13 +311,23 @@ class BlackjackStrategy:
         # Solo per mani hard (non soft)
         if not is_soft:
             # ===== SURRENDER (RESA) =====
-            # 16 vs 9: Arrenditi con TC >= 4+
-            if player_total == 16 and dealer_card == '9' and true_count >= 4:
+            # 17 vs A: Arrenditi sempre (strategia di base)
+            if player_total == 17 and dealer_card == 'A':
+                action = 'SURRENDER'
+                adjusted = True
+
+            # 16 vs 8: Arrenditi con TC >= 4+
+            if player_total == 16 and dealer_card == '8' and true_count >= 4:
+                action = 'SURRENDER'
+                adjusted = True
+
+            # 16 vs 9: Arrenditi con TC >= 0+
+            if player_total == 16 and dealer_card == '9' and true_count >= 0:
                 action = 'SURRENDER'
                 adjusted = True
             
             # 16 vs 10: Arrenditi con TC >= 0+
-            if player_total == 16 and dealer_card == '10' and true_count >= 0:
+            if player_total == 16 and dealer_card == '10':
                 action = 'SURRENDER'
                 adjusted = True
             
@@ -349,8 +341,8 @@ class BlackjackStrategy:
                 action = 'SURRENDER'
                 adjusted = True
             
-            # 15 vs 10: Arrenditi con TC >= -1
-            if player_total == 15 and dealer_card == '10' and true_count >= -1:
+            # 15 vs 10: Arrenditi con TC >= 0
+            if player_total == 15 and dealer_card == '10' and true_count >= 0:
                 action = 'SURRENDER'
                 adjusted = True
             
@@ -361,31 +353,29 @@ class BlackjackStrategy:
             
             # ===== DEVIAZIONI STRATEGIA BASE (COPPIE PURE) =====
             
-            # 17 vs A: Stand (sempre)
-            # Nessuna deviazione
             
-            # 16 vs 7: Stand con TC >= 4+
-            if player_total == 16 and dealer_card == '7' and true_count >= 4:
+            # 16 vs 9: Stand con TC >= 4+
+            if player_total == 16 and dealer_card == '9' and true_count >= 4:
                 if action == 'HIT':
                     action = 'STAND'
                     adjusted = True
             
-            # 16 vs 8: Stand con TC >= 4+
-            if player_total == 16 and dealer_card == '8' and true_count >= 4:
+            # 16 vs 10: Stand con TC > 0+
+            if player_total == 16 and dealer_card == '10' and true_count > 0:
                 if action == 'HIT':
                     action = 'STAND'
                     adjusted = True
                     
-            # 15 vs 7: Stand con TC >= 3+
-            if player_total == 15 and dealer_card == '7' and true_count >= 3:
+            # 15 vs 10: Stand con TC >= 3+
+            if player_total == 15 and dealer_card == '10' and true_count >= 3:
                 if action == 'HIT':
                     action = 'STAND'
                     adjusted = True
             
-            # 13 vs 2: Stand con TC >= -1
-            if player_total == 13 and dealer_card == '2' and true_count >= -1:
-                if action == 'HIT':
-                    action = 'STAND'
+            # 13 vs 2: Stand con TC <= -1
+            if player_total == 13 and dealer_card == '2' and true_count <= -1:
+                if action == 'STAND':
+                    action = 'HIT'
                     adjusted = True
             
             # 12 vs 2: Stand con TC >= 3+
@@ -400,28 +390,22 @@ class BlackjackStrategy:
                     action = 'STAND'
                     adjusted = True
             
-            # 12 vs 4: Stand con TC >= 0
-            if player_total == 12 and dealer_card == '4' and true_count >= 0:
-                if action == 'HIT':
-                    action = 'STAND'
+            # 12 vs 4: Hit con TC < 0
+            if player_total == 12 and dealer_card == '4' and true_count < 0:
+                if action == 'STAND':
+                    action = 'HIT'
                     adjusted = True
             
-            # 11 vs A: Raddoppia con TC >= 4+
-            if player_total == 11 and dealer_card == 'A' and true_count >= 4:
+            # 11 vs 10: Raddoppia con TC >= 4+
+            if player_total == 11 and dealer_card == '10' and true_count >= 4:
                 if action == 'HIT':
                     action = 'DOUBLE'
                     adjusted = True
             
-            # 10 vs 10: Raddoppia con TC >= 1+
-            if player_total == 10 and dealer_card == '10' and true_count >= 1:
-                if action == 'HIT':
-                    action = 'DOUBLE'
-                    adjusted = True
-                    
-            # 10 vs A: Raddoppia con TC >= 1+
-            if player_total == 10 and dealer_card == 'A' and true_count >= 1:
-                if action == 'HIT':
-                    action = 'DOUBLE'
+            # 10 vs 9: Hit con TC <= -1
+            if player_total == 10 and dealer_card == '9' and true_count <= -1:
+                if action == 'DOUBLE':
+                    action = 'HIT'
                     adjusted = True
             
             # 9 vs 2: Raddoppia con TC >= 1+
@@ -450,10 +434,10 @@ class BlackjackStrategy:
                     action = 'DOUBLE'
                     adjusted = True
             
-            # A,8 vs 6: Raddoppia con TC >= 4+
-            if player_total == 19 and dealer_card == '6' and true_count >= 4:
-                if action == 'STAND':
-                    action = 'DOUBLE'
+            # A,8 vs 6: Stand con TC < 0
+            if player_total == 19 and dealer_card == '6' and true_count < 0:
+                if action == 'DOUBLE':
+                    action = 'STAND'
                     adjusted = True
             
             # A,6 vs 2: Raddoppia con TC >= 1+
