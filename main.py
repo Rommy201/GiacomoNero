@@ -25,7 +25,7 @@ class BlackjackAssistant:
         y = (screen_height - window_height) // 2
         
         self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        self.root.configure(bg='#0a0e27')
+        self.root.configure(bg='#0f1419')
         
         # Rendi la finestra non ridimensionabile per mantenere il layout
         self.root.resizable(False, False)
@@ -79,20 +79,24 @@ class BlackjackAssistant:
         toast.after(duration, toast.destroy)
         
     def setup_ui(self):
-        # Header compatto
-        header = tk.Frame(self.root, bg='#1a1f3a', height=45)
+        # Header moderno con gradiente
+        header = tk.Frame(self.root, bg='#1a1f2e', height=45)
         header.pack(fill='x', padx=0, pady=0)
+        
+        # Linea decorativa superiore
+        top_line = tk.Frame(header, bg='#ffd700', height=3)
+        top_line.pack(fill='x')
         
         tk.Label(
             header, 
             text="♠️ BLACKJACK PRO ♣️", 
-            font=("Arial", 14, "bold"),
-            bg='#1a1f3a',
+            font=("Segoe UI", 14, "bold"),
+            bg='#1a1f2e',
             fg='#ffd700'
         ).pack(pady=5)
         
         # Container scrollabile
-        canvas = tk.Canvas(self.root, bg='#0a0e27', highlightthickness=0)
+        canvas = tk.Canvas(self.root, bg='#0f1419', highlightthickness=0)
         scrollbar = tk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='#0a0e27')
         
@@ -107,66 +111,69 @@ class BlackjackAssistant:
         # Setup compatto in accordion style
         self.setup_collapsed = tk.BooleanVar(value=True)
         
-        setup_header = tk.Frame(scrollable_frame, bg='#1a1f3a', cursor='hand2')
+        setup_header = tk.Frame(scrollable_frame, bg='#1e2433', cursor='hand2', relief='flat', bd=0)
         setup_header.pack(fill='x', padx=5, pady=(5, 0))
         setup_header.bind('<Button-1>', lambda e: self.toggle_setup())
         
         tk.Label(
             setup_header,
             text="⚙️ SETUP",
-            font=("Arial", 12, "bold"),
-            bg='#1a1f3a',
-            fg='#ffffff'
+            font=("Segoe UI", 12, "bold"),
+            bg='#1e2433',
+            fg='#a0aec0'
         ).pack(side='left', padx=10, pady=8)
         
         self.setup_arrow = tk.Label(
             setup_header,
             text="▼",
-            font=("Arial", 10),
-            bg='#1a1f3a',
-            fg='#ffffff'
+            font=("Segoe UI", 10),
+            bg='#1e2433',
+            fg='#a0aec0'
         )
         self.setup_arrow.pack(side='right', padx=10)
         
         # Setup content (collapsibile)
-        self.setup_content = tk.Frame(scrollable_frame, bg='#151a35')
+        self.setup_content = tk.Frame(scrollable_frame, bg='#1a1f2e')
         
         # Mazzi in riga singola
-        deck_row = tk.Frame(self.setup_content, bg='#151a35')
+        deck_row = tk.Frame(self.setup_content, bg='#1a1f2e')
         deck_row.pack(fill='x', padx=10, pady=5)
         
-        tk.Label(deck_row, text="Mazzi:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left')
+        tk.Label(deck_row, text="Mazzi:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left')
         self.deck_var = tk.StringVar(value="6")
-        tk.Spinbox(deck_row, from_=1, to=8, textvariable=self.deck_var, width=3, font=("Arial", 9)).pack(side='left', padx=5)
-        tk.Button(deck_row, text="Set", command=self.set_decks, bg='#2a3f5f', fg='#fff', font=("Arial", 8, "bold"), padx=8, pady=2).pack(side='left', padx=2)
-        tk.Button(deck_row, text="Reset", command=self.reset_count, bg='#7d2e2e', fg='#fff', font=("Arial", 8, "bold"), padx=8, pady=2).pack(side='left', padx=2)
+        tk.Spinbox(deck_row, from_=1, to=8, textvariable=self.deck_var, width=3, font=("Segoe UI", 9)).pack(side='left', padx=5)
+        tk.Button(deck_row, text="Set", command=self.set_decks, bg='#4299e1', fg='#fff', font=("Segoe UI", 8, "bold"), padx=8, pady=2, relief='flat').pack(side='left', padx=2)
+        tk.Button(deck_row, text="Reset", command=self.reset_count, bg='#f56565', fg='#fff', font=("Segoe UI", 8, "bold"), padx=8, pady=2, relief='flat').pack(side='left', padx=2)
         
         # Bankroll in riga singola
-        bank_row = tk.Frame(self.setup_content, bg='#151a35')
+        bank_row = tk.Frame(self.setup_content, bg='#1a1f2e')
         bank_row.pack(fill='x', padx=10, pady=5)
         
-        tk.Label(bank_row, text="Bankroll €:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left')
+        tk.Label(bank_row, text="Bankroll €:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left')
         self.bankroll_var = tk.StringVar(value="1000")
-        tk.Entry(bank_row, textvariable=self.bankroll_var, width=6, font=("Arial", 9)).pack(side='left', padx=5)
+        tk.Entry(bank_row, textvariable=self.bankroll_var, width=6, font=("Segoe UI", 9)).pack(side='left', padx=5)
         
-        tk.Label(bank_row, text="Min €:", font=("Arial", 9), bg='#151a35', fg='#aaa').pack(side='left', padx=(10, 0))
+        tk.Label(bank_row, text="Min €:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left', padx=(10, 0))
         self.min_bet_var = tk.StringVar(value="10")
-        tk.Entry(bank_row, textvariable=self.min_bet_var, width=4, font=("Arial", 9)).pack(side='left', padx=5)
+        tk.Entry(bank_row, textvariable=self.min_bet_var, width=4, font=("Segoe UI", 9)).pack(side='left', padx=5)
         
-        tk.Button(bank_row, text="Conferma", command=self.set_bankroll, bg='#2d5f2e', fg='#fff', font=("Arial", 8, "bold"), padx=10, pady=2).pack(side='left', padx=5)
+        tk.Button(bank_row, text="Conferma", command=self.set_bankroll, bg='#48bb78', fg='#fff', font=("Segoe UI", 8, "bold"), padx=10, pady=2, relief='flat').pack(side='left', padx=5)
         
-        # Conteggio in card compatta
-        count_card = tk.Frame(scrollable_frame, bg='#1a1f3a', relief='raised', bd=2)
+        # Conteggio in card moderna con bordi arrotondati
+        count_card = tk.Frame(scrollable_frame, bg='#1e2433', relief='flat', bd=0)
         count_card.pack(fill='x', padx=5, pady=3)
         
-        tk.Label(count_card, text="📊 CONTEGGIO", font=("Arial", 10, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(5, 3))
+        # Bordo superiore colorato
+        tk.Frame(count_card, bg='#4ecdc4', height=3).pack(fill='x')
+        
+        tk.Label(count_card, text="📊 CONTEGGIO", font=("Segoe UI", 10, "bold"), bg='#1e2433', fg='#4ecdc4').pack(pady=(5, 3))
         
         # Container per layout a due colonne
-        two_col_container = tk.Frame(count_card, bg='#1a1f3a')
+        two_col_container = tk.Frame(count_card, bg='#1e2433')
         two_col_container.pack(fill='x', padx=5, pady=(0, 5))
         
         # Colonna sinistra: Griglia compatta 2x2 per contatori principali
-        count_grid = tk.Frame(two_col_container, bg='#1a1f3a')
+        count_grid = tk.Frame(two_col_container, bg='#1e2433')
         count_grid.pack(side='left', padx=(5, 2))
         
         self.create_counter_display(count_grid, "Running", "0", 0, 0, '#4ecdc4')
@@ -174,111 +181,128 @@ class BlackjackAssistant:
         self.create_counter_display(count_grid, "Carte", "312", 1, 0, '#95e1d3')
         self.create_counter_display(count_grid, "Viste", "0", 1, 1, '#9896f1')
         
-        # Colonna destra: Bankroll info compatta
-        bank_info = tk.Frame(two_col_container, bg='#151a35', relief='sunken', bd=1)
+        # Colonna destra: Bankroll info moderna
+        bank_info = tk.Frame(two_col_container, bg='#252b3b', relief='flat', bd=0)
         bank_info.pack(side='left', fill='both', expand=True, padx=(2, 5))
         
-        bank_row1 = tk.Frame(bank_info, bg='#151a35')
+        bank_row1 = tk.Frame(bank_info, bg='#252b3b')
         bank_row1.pack(fill='x', pady=2)
         
-        tk.Label(bank_row1, text="💰", font=("Arial", 12), bg='#151a35').pack(side='left', padx=5)
-        self.bankroll_label = tk.Label(bank_row1, text="1000€", font=("Arial", 14, "bold"), bg='#151a35', fg='#00ff00')
+        tk.Label(bank_row1, text="💰", font=("Segoe UI", 12), bg='#252b3b').pack(side='left', padx=5)
+        self.bankroll_label = tk.Label(bank_row1, text="1000€", font=("Segoe UI", 14, "bold"), bg='#252b3b', fg='#48bb78')
         self.bankroll_label.pack(side='left')
         
-        self.profit_label = tk.Label(bank_row1, text="(+0€)", font=("Arial", 11), bg='#151a35', fg='#aaa')
+        self.profit_label = tk.Label(bank_row1, text="(+0€)", font=("Segoe UI", 11), bg='#252b3b', fg='#a0aec0')
         self.profit_label.pack(side='left', padx=5)
         
-        bank_row2 = tk.Frame(bank_info, bg='#151a35')
+        bank_row2 = tk.Frame(bank_info, bg='#252b3b')
         bank_row2.pack(fill='x', pady=2)
         
-        tk.Label(bank_row2, text="🎯", font=("Arial", 10), bg='#151a35').pack(side='left', padx=5)
-        self.hands_label = tk.Label(bank_row2, text="0 mani", font=("Arial", 9), bg='#151a35', fg='#aaa')
+        tk.Label(bank_row2, text="🎯", font=("Segoe UI", 10), bg='#252b3b').pack(side='left', padx=5)
+        self.hands_label = tk.Label(bank_row2, text="0 mani", font=("Segoe UI", 9), bg='#252b3b', fg='#a0aec0')
         self.hands_label.pack(side='left')
         
-        self.winrate_label = tk.Label(bank_row2, text="• 0% WR", font=("Arial", 9), bg='#151a35', fg='#aaa')
+        self.winrate_label = tk.Label(bank_row2, text="• 0% WR", font=("Segoe UI", 9), bg='#252b3b', fg='#a0aec0')
         self.winrate_label.pack(side='left', padx=10)
         
         # Puntata suggerita integrata
-        bank_row3 = tk.Frame(bank_info, bg='#151a35')
+        bank_row3 = tk.Frame(bank_info, bg='#252b3b')
         bank_row3.pack(fill='x', pady=(5, 2))
         
-        tk.Label(bank_row3, text="💎", font=("Arial", 10), bg='#151a35').pack(side='left', padx=5)
+        tk.Label(bank_row3, text="💎", font=("Segoe UI", 10), bg='#252b3b').pack(side='left', padx=5)
         self.bet_suggestion_label = tk.Label(
             bank_row3,
             text="Minimo tavolo - 10€",
-            font=("Arial", 10, "bold"),
-            bg='#151a35',
-            fg='#ffd700'
+            font=("Segoe UI", 10, "bold"),
+            bg='#252b3b',
+            fg='#f6ad55'
         )
         self.bet_suggestion_label.pack(side='left')
         
         # Selezione modalità e griglia carte in layout orizzontale
-        cards_section = tk.Frame(scrollable_frame, bg='#1a1f3a')
+        cards_section = tk.Frame(scrollable_frame, bg='#1e2433')
         cards_section.pack(fill='x', padx=5, pady=3)
         
-        tk.Label(cards_section, text="🎴 SELEZIONA CARTA", font=("Arial", 9, "bold"), bg='#1a1f3a', fg='#ffffff').pack(pady=(5, 3))
+        # Bordo superiore colorato
+        tk.Frame(cards_section, bg='#9896f1', height=3).pack(fill='x')
+        
+        tk.Label(cards_section, text="🃏 SELEZIONA CARTA", font=("Segoe UI", 10, "bold"), bg='#1e2433', fg='#9896f1').pack(pady=(5, 3))
         
         # Container per layout a due colonne (modalità + carte)
-        cards_container = tk.Frame(cards_section, bg='#1a1f3a')
+        cards_container = tk.Frame(cards_section, bg='#1e2433')
         cards_container.pack(fill='x', padx=5, pady=(0, 5))
         
         # Colonna sinistra: Modalità e Annulla
-        mode_column = tk.Frame(cards_container, bg='#1a1f3a')
+        mode_column = tk.Frame(cards_container, bg='#1e2433')
         mode_column.pack(side='left', padx=(0, 5))
         
-        tk.Radiobutton(
-            mode_column, text="🎴\nBanco", variable=self.selection_mode, value='dealer',
-            font=("Arial", 8, "bold"), bg='#5d2e46', fg='#fff', selectcolor='#7d3e56',
-            activebackground='#5d2e46', indicatoron=0, width=7, padx=3, pady=5, justify='center'
-        ).pack(pady=2)
+        # Dealer button
+        dealer_btn = tk.Radiobutton(
+            mode_column, text="🂠\nBANCO", variable=self.selection_mode, value='dealer',
+            font=("Segoe UI", 9, "bold"), bg='#c53030', fg='#fff', selectcolor='#9b2c2c',
+            activebackground='#9b2c2c', activeforeground='#fff',
+            indicatoron=0, width=7, padx=5, pady=8, justify='center',
+            relief='flat', bd=0, highlightthickness=0
+        )
+        dealer_btn.pack(pady=2)
         
-        tk.Radiobutton(
-            mode_column, text="🃏\nMie", variable=self.selection_mode, value='player',
-            font=("Arial", 8, "bold"), bg='#2e5d4f', fg='#fff', selectcolor='#3e7d6f',
-            activebackground='#2e5d4f', indicatoron=0, width=7, padx=3, pady=5, justify='center'
-        ).pack(pady=2)
+        # Player button
+        player_btn = tk.Radiobutton(
+            mode_column, text="🂡\nMIE", variable=self.selection_mode, value='player',
+            font=("Segoe UI", 9, "bold"), bg='#2f855a', fg='#fff', selectcolor='#276749',
+            activebackground='#276749', activeforeground='#fff',
+            indicatoron=0, width=7, padx=5, pady=8, justify='center',
+            relief='flat', bd=0, highlightthickness=0
+        )
+        player_btn.pack(pady=2)
         
-        tk.Radiobutton(
-            mode_column, text="🎯\nTavolo", variable=self.selection_mode, value='table',
-            font=("Arial", 8, "bold"), bg='#5d532e', fg='#fff', selectcolor='#7d6f3e',
-            activebackground='#5d532e', indicatoron=0, width=7, padx=3, pady=5, justify='center'
-        ).pack(pady=2)
+        # Table button
+        table_btn = tk.Radiobutton(
+            mode_column, text="🎲\nTAVOLO", variable=self.selection_mode, value='table',
+            font=("Segoe UI", 9, "bold"), bg='#d69e2e', fg='#fff', selectcolor='#b7791f',
+            activebackground='#b7791f', activeforeground='#fff',
+            indicatoron=0, width=7, padx=5, pady=8, justify='center',
+            relief='flat', bd=0, highlightthickness=0
+        )
+        table_btn.pack(pady=2)
         
-        # Bottone Annulla
+        # Bottone Annulla moderno
         self.undo_btn = tk.Button(
             mode_column,
-            text="↩️",
+            text="↺",
             command=self.undo_last_card,
-            bg='#7d4e2e',
+            bg='#805ad5',
             fg='#ffffff',
-            font=("Arial", 9, "bold"),
+            font=("Segoe UI", 16, "bold"),
             width=7,
             padx=3,
             pady=5,
-            relief='raised',
-            bd=2,
-            state='disabled'
+            relief='flat',
+            bd=0,
+            state='disabled',
+            disabledforeground='#718096',
+            cursor='hand2'
         )
         self.undo_btn.pack(pady=2)
         
         # Colonna destra: Griglia carte compatta e touch-friendly
-        cards_grid = tk.Frame(cards_container, bg='#1a1f3a')
+        cards_grid = tk.Frame(cards_container, bg='#1e2433')
         cards_grid.pack(side='left', fill='x', expand=True)
         
         # Riga 1: A, 2-6
-        row1 = tk.Frame(cards_grid, bg='#1a1f3a')
+        row1 = tk.Frame(cards_grid, bg='#1e2433')
         row1.pack(pady=1)
         for card in ['A', '2', '3', '4', '5', '6']:
             self.create_card_button_mobile(row1, card)
         
         # Riga 2: 7-Q
-        row2 = tk.Frame(cards_grid, bg='#1a1f3a')
+        row2 = tk.Frame(cards_grid, bg='#1e2433')
         row2.pack(pady=1)
         for card in ['7', '8', '9', '10', 'J', 'Q']:
             self.create_card_button_mobile(row2, card)
         
         # Riga 3: K
-        row3 = tk.Frame(cards_grid, bg='#1a1f3a')
+        row3 = tk.Frame(cards_grid, bg='#1e2433')
         row3.pack(pady=1)
         self.create_card_button_mobile(row3, 'K')
         
@@ -405,14 +429,17 @@ class BlackjackAssistant:
         self.update_count_display()
     
     def create_counter_display(self, parent, label, value, row, col, color):
-        """Crea un display compatto per contatori"""
-        frame = tk.Frame(parent, bg='#151a35', relief='solid', bd=1, width=90, height=48)
+        """Crea un display moderno per contatori con gradiente simulato"""
+        frame = tk.Frame(parent, bg='#1a1f2e', relief='flat', bd=0, width=90, height=48)
         frame.grid(row=row, column=col, padx=2, pady=2, sticky='nsew')
         frame.grid_propagate(False)
         
-        tk.Label(frame, text=label, font=("Arial", 7), bg='#151a35', fg='#aaa').pack(pady=(2, 0))
+        # Bordo colorato superiore
+        tk.Frame(frame, bg=color, height=2).pack(fill='x')
         
-        label_widget = tk.Label(frame, text=value, font=("Arial", 12, "bold"), bg='#151a35', fg=color)
+        tk.Label(frame, text=label, font=("Segoe UI", 7), bg='#1a1f2e', fg='#a0aec0').pack(pady=(2, 0))
+        
+        label_widget = tk.Label(frame, text=value, font=("Segoe UI", 13, "bold"), bg='#1a1f2e', fg=color)
         label_widget.pack()
         
         # Salva riferimenti
@@ -426,59 +453,93 @@ class BlackjackAssistant:
             self.cards_seen_label = label_widget
     
     def create_card_button_mobile(self, parent, card):
-        """Crea bottone carta ottimizzato per mobile"""
-        card_symbols = {
-            'A': '🂡', '2': '🂢', '3': '🂣', '4': '🂤', '5': '🂥',
-            '6': '🂦', '7': '🂧', '8': '🂨', '9': '🂩', '10': '🂪',
-            'J': '🂫', 'Q': '🂭', 'K': '🂮'
-        }
+        """Crea bottone carta ottimizzato per mobile con design moderno"""
         
+        # Colori moderni basati sul valore
         if card in ['2', '3', '4', '5', '6']:
-            color = '#4a7c59'  # Verde
+            color = '#38a169'  # Verde acceso
+            hover_color = '#2f855a'
         elif card in ['7', '8', '9']:
-            color = '#7c6a3a'  # Oro
+            color = '#ecc94b'  # Giallo oro
+            hover_color = '#d69e2e'
         else:
-            color = '#7c3a3a'  # Rosso
+            color = '#e53e3e'  # Rosso acceso
+            hover_color = '#c53030'
         
         btn = tk.Button(
             parent,
-            text=f"{card}",
+            text=card,
             command=lambda: self.card_clicked(card),
             bg=color,
             fg='#ffffff',
-            font=("Arial", 11, "bold"),
+            font=("Segoe UI", 13, "bold"),
             width=4,
             height=1,
-            relief='raised',
-            bd=2,
-            cursor='hand2'
+            relief='flat',
+            bd=0,
+            cursor='hand2',
+            activebackground=hover_color,
+            activeforeground='#ffffff'
         )
         btn.pack(side='left', padx=1, pady=1)
         
-        def on_press(e):
-            btn.config(relief='sunken')
+        # Effetto hover
+        def on_enter(e):
+            btn.config(bg=hover_color)
         
-        def on_release(e):
-            btn.config(relief='raised')
+        def on_leave(e):
+            btn.config(bg=color)
         
-        btn.bind("<ButtonPress-1>", on_press)
-        btn.bind("<ButtonRelease-1>", on_release)
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
     
     def create_result_button(self, parent, text, result, color, row, col):
-        """Crea bottone risultato compatto"""
+        """Crea bottone risultato con design moderno"""
+        # Colori più vivaci e moderni
+        color_map = {
+            '#2d5f2e': '#38a169',  # Verde
+            '#7d2e2e': '#e53e3e',  # Rosso
+            '#3a3a5f': '#4a5568',  # Grigio
+            '#7d5f2e': '#d69e2e',  # Oro
+            '#5f5a77': '#805ad5'   # Viola
+        }
+        modern_color = color_map.get(color, color)
+        
         btn = tk.Button(
             parent,
             text=text,
             command=lambda: self.record_result(result),
-            bg=color,
+            bg=modern_color,
             fg='#ffffff',
-            font=("Arial", 9, "bold"),
+            font=("Segoe UI", 10, "bold"),
             width=8,
             height=1,
-            relief='raised',
-            bd=2
+            relief='flat',
+            bd=0,
+            cursor='hand2',
+            padx=5,
+            pady=8
         )
         btn.grid(row=row, column=col, padx=2, pady=1)
+        
+        # Hover effect
+        original_color = modern_color
+        def on_enter(e):
+            # Colore più scuro per hover
+            hover_colors = {
+                '#38a169': '#2f855a',
+                '#e53e3e': '#c53030',
+                '#4a5568': '#2d3748',
+                '#d69e2e': '#b7791f',
+                '#805ad5': '#6b46c1'
+            }
+            btn.config(bg=hover_colors.get(original_color, original_color))
+        
+        def on_leave(e):
+            btn.config(bg=original_color)
+        
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
     
     def toggle_setup(self):
         """Toggle setup panel visibility"""
