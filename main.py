@@ -306,51 +306,61 @@ class BlackjackAssistant:
         row3.pack(pady=1)
         self.create_card_button_mobile(row3, 'K')
         
-        # Display mano corrente compatto
-        hand_card = tk.Frame(scrollable_frame, bg='#151a35', relief='ridge', bd=2)
-        hand_card.pack(fill='x', padx=5, pady=3)
+        # Container per MANO e AZIONE affiancate
+        game_info_container = tk.Frame(scrollable_frame, bg='#0f1419')
+        game_info_container.pack(fill='x', padx=5, pady=3)
         
-        tk.Label(hand_card, text="🎰 MANO", font=("Arial", 9, "bold"), bg='#151a35', fg='#ffd700').pack(pady=(2, 1))
+        # Colonna sinistra: Display mano corrente
+        hand_card = tk.Frame(game_info_container, bg='#1e2433', relief='flat', bd=0, width=210)
+        hand_card.pack(side='left', fill='both', expand=True, padx=(0, 2))
         
-        dealer_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
-        dealer_frame.pack(fill='x', padx=10, pady=(1, 0))
+        # Bordo superiore colorato
+        tk.Frame(hand_card, bg='#ff6b6b', height=3).pack(fill='x')
         
-        tk.Label(dealer_frame, text="Banco:", font=("Arial", 9), bg='#1a1f3a', fg='#ff6b6b').pack(side='left', padx=5)
-        self.dealer_display = tk.Label(dealer_frame, text="?", font=("Arial", 11), bg='#1a1f3a', fg='#ff6b6b', wraplength=250)
-        self.dealer_display.pack(side='left', padx=5, pady=1)
+        tk.Label(hand_card, text="🎰 MANO", font=("Segoe UI", 9, "bold"), bg='#1e2433', fg='#ff6b6b').pack(pady=(3, 1))
         
-        self.dealer_total_label = tk.Label(hand_card, text="", font=("Arial", 11, "bold"), bg='#151a35', fg='#ff6b6b')
+        dealer_frame = tk.Frame(hand_card, bg='#252b3b', relief='flat', bd=0)
+        dealer_frame.pack(fill='x', padx=5, pady=(1, 0))
+        
+        tk.Label(dealer_frame, text="Banco:", font=("Segoe UI", 8), bg='#252b3b', fg='#ff6b6b').pack(side='left', padx=3)
+        self.dealer_display = tk.Label(dealer_frame, text="?", font=("Segoe UI", 10), bg='#252b3b', fg='#ff6b6b', wraplength=120)
+        self.dealer_display.pack(side='left', padx=3, pady=1)
+        
+        self.dealer_total_label = tk.Label(hand_card, text="", font=("Segoe UI", 10, "bold"), bg='#1e2433', fg='#ff6b6b')
         self.dealer_total_label.pack(pady=0)
         
-        player_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
-        player_frame.pack(fill='x', padx=10, pady=(0, 1))
+        player_frame = tk.Frame(hand_card, bg='#252b3b', relief='flat', bd=0)
+        player_frame.pack(fill='x', padx=5, pady=(0, 1))
         
-        tk.Label(player_frame, text="Mano 1:", font=("Arial", 9), bg='#1a1f3a', fg='#4ecdc4').pack(side='left', padx=5)
-        self.player_cards_label = tk.Label(player_frame, text="-", font=("Arial", 11), bg='#1a1f3a', fg='#ffffff', wraplength=250)
-        self.player_cards_label.pack(side='left', padx=5, pady=3)
+        tk.Label(player_frame, text="Mano 1:", font=("Segoe UI", 8), bg='#252b3b', fg='#4ecdc4').pack(side='left', padx=3)
+        self.player_cards_label = tk.Label(player_frame, text="-", font=("Segoe UI", 10), bg='#252b3b', fg='#ffffff', wraplength=120)
+        self.player_cards_label.pack(side='left', padx=3, pady=2)
         
-        self.player_total_label = tk.Label(hand_card, text="Tot: -", font=("Arial", 12, "bold"), bg='#151a35', fg='#4ecdc4')
-        self.player_total_label.pack(pady=3)
+        self.player_total_label = tk.Label(hand_card, text="Tot: -", font=("Segoe UI", 11, "bold"), bg='#1e2433', fg='#4ecdc4')
+        self.player_total_label.pack(pady=2)
         
         # Frame per mano split (inizialmente nascosto)
-        self.split_frame = tk.Frame(hand_card, bg='#1a1f3a', relief='solid', bd=1)
+        self.split_frame = tk.Frame(hand_card, bg='#252b3b', relief='flat', bd=0)
         
-        tk.Label(self.split_frame, text="Mano 2:", font=("Arial", 9), bg='#1a1f3a', fg='#95e1d3').pack(side='left', padx=5)
-        self.player_cards_split_label = tk.Label(self.split_frame, text="-", font=("Arial", 11), bg='#1a1f3a', fg='#ffffff', wraplength=250)
-        self.player_cards_split_label.pack(side='left', padx=5, pady=3)
+        tk.Label(self.split_frame, text="Mano 2:", font=("Segoe UI", 8), bg='#252b3b', fg='#95e1d3').pack(side='left', padx=3)
+        self.player_cards_split_label = tk.Label(self.split_frame, text="-", font=("Segoe UI", 10), bg='#252b3b', fg='#ffffff', wraplength=120)
+        self.player_cards_split_label.pack(side='left', padx=3, pady=2)
         
-        self.player_split_total_label = tk.Label(hand_card, text="", font=("Arial", 12, "bold"), bg='#151a35', fg='#95e1d3')
+        self.player_split_total_label = tk.Label(hand_card, text="", font=("Segoe UI", 11, "bold"), bg='#1e2433', fg='#95e1d3')
         
         # Bottone per switchare mano attiva (nascosto inizialmente)
         self.switch_hand_btn = tk.Button(
             hand_card,
-            text="🔀 Passa a Mano 2",
+            text="🔀 Mano 2",
             command=self.switch_split_hand,
-            bg='#3a5f7d',
+            bg='#4299e1',
             fg='#ffffff',
-            font=("Arial", 9, "bold"),
-            padx=10,
-            pady=3
+            font=("Segoe UI", 8, "bold"),
+            padx=5,
+            pady=2,
+            relief='flat',
+            bd=0,
+            cursor='hand2'
         )
         
         # Bottone per attivare split
@@ -358,55 +368,64 @@ class BlackjackAssistant:
             hand_card,
             text="✂️ SPLIT",
             command=self.activate_split,
-            bg='#5d3e7d',
+            bg='#805ad5',
             fg='#ffffff',
-            font=("Arial", 9, "bold"),
-            padx=10,
-            pady=3
+            font=("Segoe UI", 8, "bold"),
+            padx=5,
+            pady=2,
+            relief='flat',
+            bd=0,
+            cursor='hand2'
         )
         
-        self.other_players_label = tk.Label(hand_card, text="Tavolo: -", font=("Arial", 8), bg='#151a35', fg='#888', wraplength=360)
-        self.other_players_label.pack(pady=(2, 5))
+        self.other_players_label = tk.Label(hand_card, text="Tavolo: -", font=("Segoe UI", 7), bg='#1e2433', fg='#718096', wraplength=200)
+        self.other_players_label.pack(pady=(1, 3))
         
-        # Strategia prominente
-        strategy_card = tk.Frame(scrollable_frame, bg='#1f3a1a', relief='raised', bd=2)
-        strategy_card.pack(fill='x', padx=5, pady=3)
+        # Colonna destra: Strategia
+        strategy_card = tk.Frame(game_info_container, bg='#1e2433', relief='flat', bd=0, width=210)
+        strategy_card.pack(side='left', fill='both', expand=True, padx=(2, 0))
         
-        tk.Label(strategy_card, text="💡 AZIONE", font=("Arial", 10, "bold"), bg='#1f3a1a', fg='#ffd700').pack(pady=(5, 2))
+        # Bordo superiore colorato
+        tk.Frame(strategy_card, bg='#48bb78', height=3).pack(fill='x')
+        
+        tk.Label(strategy_card, text="💡 AZIONE", font=("Segoe UI", 9, "bold"), bg='#1e2433', fg='#48bb78').pack(pady=(3, 2))
         
         self.strategy_label = tk.Label(
             strategy_card,
             text="Aspetto carte...",
-            font=("Arial", 12, "bold"),
-            bg='#1f3a1a',
+            font=("Segoe UI", 11, "bold"),
+            bg='#1e2433',
             fg='#ffffff',
-            wraplength=380,
+            wraplength=190,
             justify='center'
         )
-        self.strategy_label.pack(pady=(0, 5), padx=10)
+        self.strategy_label.pack(pady=(0, 5), padx=5, fill='both', expand=True)
         
         # Risultati in griglia compatta
-        result_card = tk.Frame(scrollable_frame, bg='#1a1f3a')
+        result_card = tk.Frame(scrollable_frame, bg='#1e2433')
         result_card.pack(fill='x', padx=5, pady=3)
         
-        tk.Label(result_card, text="🎲 RISULTATO", font=("Arial", 9, "bold"), bg='#1a1f3a', fg='#ffd700').pack(pady=(3, 2))
+        # Bordo superiore colorato
+        tk.Frame(result_card, bg='#f6ad55', height=3).pack(fill='x')
+        
+        tk.Label(result_card, text="🎲 RISULTATO", font=("Segoe UI", 9, "bold"), bg='#1e2433', fg='#f6ad55').pack(pady=(3, 2))
         
         # Input puntata effettiva
-        bet_input_frame = tk.Frame(result_card, bg='#1a1f3a')
+        bet_input_frame = tk.Frame(result_card, bg='#1e2433')
         bet_input_frame.pack(pady=(0, 3))
         
-        tk.Label(bet_input_frame, text="Puntata €:", font=("Arial", 8), bg='#1a1f3a', fg='#aaa').pack(side='left', padx=(0, 3))
+        tk.Label(bet_input_frame, text="Puntata €:", font=("Segoe UI", 8), bg='#1e2433', fg='#a0aec0').pack(side='left', padx=(0, 3))
         self.actual_bet_var = tk.StringVar(value="10")
         self.actual_bet_entry = tk.Entry(
             bet_input_frame,
             textvariable=self.actual_bet_var,
             width=6,
-            font=("Arial", 9),
+            font=("Segoe UI", 9),
             justify='center'
         )
         self.actual_bet_entry.pack(side='left')
         
-        res_grid1 = tk.Frame(result_card, bg='#1a1f3a')
+        res_grid1 = tk.Frame(result_card, bg='#1e2433')
         res_grid1.pack(pady=2)
         
         self.create_result_button(res_grid1, "✅", "win", '#2d5f2e', 0, 0)
@@ -414,7 +433,7 @@ class BlackjackAssistant:
         self.create_result_button(res_grid1, "➖", "push", '#3a3a5f', 0, 2)
         self.create_result_button(res_grid1, "⭐", "blackjack", '#7d5f2e', 0, 3)
         
-        res_grid2 = tk.Frame(result_card, bg='#1a1f3a')
+        res_grid2 = tk.Frame(result_card, bg='#1e2433')
         res_grid2.pack(pady=2)
         
         self.create_result_button(res_grid2, "2xW", "double_win", '#2d5f2e', 0, 0)
