@@ -139,25 +139,105 @@ class BlackjackAssistant:
         deck_row = tk.Frame(self.setup_content, bg='#1a1f2e')
         deck_row.pack(fill='x', padx=10, pady=5)
         
-        tk.Label(deck_row, text="Mazzi:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left')
+        tk.Label(deck_row, text="Mazzi:", font=("Segoe UI", 9, "bold"), bg='#1a1f2e', fg='#e2e8f0').pack(side='left', padx=(0, 5))
         self.deck_var = tk.StringVar(value="6")
-        tk.Spinbox(deck_row, from_=1, to=8, textvariable=self.deck_var, width=3, font=("Segoe UI", 9)).pack(side='left', padx=5)
-        tk.Button(deck_row, text="Set", command=self.set_decks, bg='#4299e1', fg='#fff', font=("Segoe UI", 8, "bold"), padx=8, pady=2, relief='flat').pack(side='left', padx=2)
-        tk.Button(deck_row, text="Reset", command=self.reset_count, bg='#f56565', fg='#fff', font=("Segoe UI", 8, "bold"), padx=8, pady=2, relief='flat').pack(side='left', padx=2)
+        deck_spinbox = tk.Spinbox(
+            deck_row, 
+            from_=1, 
+            to=8, 
+            textvariable=self.deck_var, 
+            width=4, 
+            font=("Segoe UI", 10, "bold"),
+            bg='#252b3b',
+            fg='#ffffff',
+            buttonbackground='#4299e1',
+            relief='flat',
+            bd=0,
+            justify='center'
+        )
+        deck_spinbox.pack(side='left', padx=5)
+        
+        # Bottone Set con hover
+        set_btn = tk.Button(
+            deck_row, 
+            text="✓ Set", 
+            command=self.set_decks, 
+            bg='#4299e1', 
+            fg='#fff', 
+            font=("Segoe UI", 9, "bold"), 
+            padx=10, 
+            pady=5, 
+            relief='flat',
+            bd=0,
+            cursor='hand2'
+        )
+        set_btn.pack(side='left', padx=2)
+        
+        reset_btn = tk.Button(
+            deck_row, 
+            text="↺ Reset", 
+            command=self.reset_count, 
+            bg='#f56565', 
+            fg='#fff', 
+            font=("Segoe UI", 9, "bold"), 
+            padx=10, 
+            pady=5, 
+            relief='flat',
+            bd=0,
+            cursor='hand2'
+        )
+        reset_btn.pack(side='left', padx=2)
         
         # Bankroll in riga singola
         bank_row = tk.Frame(self.setup_content, bg='#1a1f2e')
         bank_row.pack(fill='x', padx=10, pady=5)
         
-        tk.Label(bank_row, text="Bankroll €:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left')
+        tk.Label(bank_row, text="Bankroll €:", font=("Segoe UI", 9, "bold"), bg='#1a1f2e', fg='#e2e8f0').pack(side='left', padx=(0, 5))
         self.bankroll_var = tk.StringVar(value="1000")
-        tk.Entry(bank_row, textvariable=self.bankroll_var, width=6, font=("Segoe UI", 9)).pack(side='left', padx=5)
+        bankroll_entry = tk.Entry(
+            bank_row, 
+            textvariable=self.bankroll_var, 
+            width=7, 
+            font=("Segoe UI", 10, "bold"),
+            bg='#252b3b',
+            fg='#ffffff',
+            relief='flat',
+            bd=0,
+            justify='center',
+            insertbackground='#ffffff'
+        )
+        bankroll_entry.pack(side='left', padx=5)
         
-        tk.Label(bank_row, text="Min €:", font=("Segoe UI", 9), bg='#1a1f2e', fg='#a0aec0').pack(side='left', padx=(10, 0))
+        tk.Label(bank_row, text="Min €:", font=("Segoe UI", 9, "bold"), bg='#1a1f2e', fg='#e2e8f0').pack(side='left', padx=(10, 5))
         self.min_bet_var = tk.StringVar(value="10")
-        tk.Entry(bank_row, textvariable=self.min_bet_var, width=4, font=("Segoe UI", 9)).pack(side='left', padx=5)
+        minbet_entry = tk.Entry(
+            bank_row, 
+            textvariable=self.min_bet_var, 
+            width=5, 
+            font=("Segoe UI", 10, "bold"),
+            bg='#252b3b',
+            fg='#ffffff',
+            relief='flat',
+            bd=0,
+            justify='center',
+            insertbackground='#ffffff'
+        )
+        minbet_entry.pack(side='left', padx=5)
         
-        tk.Button(bank_row, text="Conferma", command=self.set_bankroll, bg='#48bb78', fg='#fff', font=("Segoe UI", 8, "bold"), padx=10, pady=2, relief='flat').pack(side='left', padx=5)
+        confirm_btn = tk.Button(
+            bank_row, 
+            text="✓ Conferma", 
+            command=self.set_bankroll, 
+            bg='#48bb78', 
+            fg='#fff', 
+            font=("Segoe UI", 9, "bold"), 
+            padx=10, 
+            pady=5, 
+            relief='flat',
+            bd=0,
+            cursor='hand2'
+        )
+        confirm_btn.pack(side='left', padx=5)
         
         # Conteggio in card moderna con bordi arrotondati
         count_card = tk.Frame(scrollable_frame, bg='#1e2433', relief='flat', bd=0)
@@ -236,33 +316,39 @@ class BlackjackAssistant:
         mode_column = tk.Frame(cards_container, bg='#1e2433')
         mode_column.pack(side='left', padx=(0, 5))
         
-        # Dealer button
+        # Dealer button - più scuro quando non selezionato
         dealer_btn = tk.Radiobutton(
             mode_column, text="🂠\nBANCO", variable=self.selection_mode, value='dealer',
-            font=("Segoe UI", 9, "bold"), bg='#c53030', fg='#fff', selectcolor='#9b2c2c',
-            activebackground='#9b2c2c', activeforeground='#fff',
+            font=("Segoe UI", 9, "bold"), 
+            bg='#7d2020', fg='#fff',  # Più scuro quando non selezionato
+            selectcolor='#e53e3e',  # Rosso brillante quando selezionato
+            activebackground='#c53030', activeforeground='#fff',
             indicatoron=0, width=7, padx=5, pady=8, justify='center',
-            relief='flat', bd=0, highlightthickness=0
+            relief='raised', bd=2
         )
         dealer_btn.pack(pady=2)
         
         # Player button
         player_btn = tk.Radiobutton(
             mode_column, text="🂡\nMIE", variable=self.selection_mode, value='player',
-            font=("Segoe UI", 9, "bold"), bg='#2f855a', fg='#fff', selectcolor='#276749',
-            activebackground='#276749', activeforeground='#fff',
+            font=("Segoe UI", 9, "bold"), 
+            bg='#1e5a3a', fg='#fff',  # Più scuro quando non selezionato
+            selectcolor='#38a169',  # Verde brillante quando selezionato
+            activebackground='#2f855a', activeforeground='#fff',
             indicatoron=0, width=7, padx=5, pady=8, justify='center',
-            relief='flat', bd=0, highlightthickness=0
+            relief='raised', bd=2
         )
         player_btn.pack(pady=2)
         
         # Table button
         table_btn = tk.Radiobutton(
             mode_column, text="🎲\nTAVOLO", variable=self.selection_mode, value='table',
-            font=("Segoe UI", 9, "bold"), bg='#d69e2e', fg='#fff', selectcolor='#b7791f',
-            activebackground='#b7791f', activeforeground='#fff',
+            font=("Segoe UI", 9, "bold"), 
+            bg='#8d6a1f', fg='#fff',  # Più scuro quando non selezionato
+            selectcolor='#ecc94b',  # Oro brillante quando selezionato
+            activebackground='#d69e2e', activeforeground='#fff',
             indicatoron=0, width=7, padx=5, pady=8, justify='center',
-            relief='flat', bd=0, highlightthickness=0
+            relief='raised', bd=2
         )
         table_btn.pack(pady=2)
         
