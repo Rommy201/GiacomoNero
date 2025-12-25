@@ -59,9 +59,9 @@ class ToastWidget(BoxLayout):
     def __init__(self, message, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
-        self.size_hint = (None, None)
-        self.size = (360, 55)
+        self.size_hint = (0.85, 0.065)
         self.pos_hint = {'center_x': 0.5, 'top': 0.96}
+        self.padding = [15, 10]
         
         with self.canvas.before:
             Color(0.078, 0.106, 0.176, 0.98)  # #141B2D con alpha
@@ -121,9 +121,6 @@ class BlackjackApp(App):
         # Gestione split multipli
         self.current_hand_index = 0  # Indice della mano corrente
         self.max_hands = 4  # Massimo 4 mani (come nei casinò reali)
-        
-        # Storico inserimenti per undo (ultimi 5)
-        self.card_history = []  # Lista di dict: {'card': carta, 'mode': modalità, 'hand_index': indice_mano}
         
         # Container principale - FloatLayout per supportare toast
         root = FloatLayout()
@@ -306,7 +303,7 @@ class BlackjackApp(App):
             spacing=10
         )
         
-        # Bottoni modalità + Annulla (verticale, sinistra)
+        # Bottoni modalità + Cancella (verticale, sinistra)
         mode_buttons = BoxLayout(orientation='vertical', size_hint_x=0.24, spacing=5)
         
         self.mode_banco_btn = ToggleButton(
@@ -318,7 +315,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.33
+            size_hint_y=0.25
         )
         self.mode_banco_btn.bind(on_press=lambda x: self.set_mode('banco'))
         self.make_rounded_button(self.mode_banco_btn, radius=8)
@@ -331,7 +328,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.33
+            size_hint_y=0.25
         )
         self.mode_mio_btn.bind(on_press=lambda x: self.set_mode('mio'))
         self.make_rounded_button(self.mode_mio_btn, radius=8)
@@ -344,14 +341,27 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.33
+            size_hint_y=0.25
         )
         self.mode_tavolo_btn.bind(on_press=lambda x: self.set_mode('tavolo'))
         self.make_rounded_button(self.mode_tavolo_btn, radius=8)
         
+        cancel_btn = Button(
+            text='CANCELLA',
+            background_color=(0.90, 0.24, 0.24, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='12sp',
+            bold=True,
+            size_hint_y=0.25
+        )
+        cancel_btn.bind(on_press=lambda x: self.delete_last_card())
+        self.make_rounded_button(cancel_btn, radius=8)
+        
         mode_buttons.add_widget(self.mode_banco_btn)
         mode_buttons.add_widget(self.mode_mio_btn)
         mode_buttons.add_widget(self.mode_tavolo_btn)
+        mode_buttons.add_widget(cancel_btn)
         
         # Griglia carte 4x4 (13 carte)
         cards_grid = GridLayout(cols=4, spacing=5, size_hint_x=1)
@@ -388,62 +398,6 @@ class BlackjackApp(App):
         cards_section.add_widget(mode_buttons)
         cards_section.add_widget(cards_grid)
         main_layout.add_widget(cards_section)
-        
-        # === STORICO ULTIMI INSERIMENTI ===
-        history_section = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=0.045,
-            padding=[10, 4],
-            spacing=4
-        )
-        
-        history_label = Label(
-            text='Ultimi inserimenti:',
-            color=(0.7, 0.7, 0.7, 1),
-            font_size='10sp',
-            size_hint_x=0.28,
-            halign='right',
-            valign='middle'
-        )
-        history_label.bind(size=history_label.setter('text_size'))
-        
-        # Container per le carte nello storico
-        self.history_cards_box = BoxLayout(
-            orientation='horizontal',
-            size_hint_x=0.55,
-            spacing=3
-        )
-        
-        # Inizializza con 5 label vuote
-        self.history_labels = []
-        for i in range(5):
-            lbl = Label(
-                text='-',
-                color=(0.5, 0.5, 0.5, 1),
-                font_size='11sp',
-                halign='center',
-                valign='middle'
-            )
-            self.history_labels.append(lbl)
-            self.history_cards_box.add_widget(lbl)
-        
-        # Bottone CANCELLA
-        cancel_btn = Button(
-            text='CANCELLA',
-            background_color=(0.3, 0.8, 0.77, 1),
-            background_normal='',
-            color=(1, 1, 1, 1),
-            font_size='10sp',
-            bold=True,
-            size_hint_x=0.17
-        )
-        cancel_btn.bind(on_press=lambda x: self.undo_hand())
-        self.make_rounded_button(cancel_btn, radius=6)
-        
-        history_section.add_widget(history_label)
-        history_section.add_widget(self.history_cards_box)
-        history_section.add_widget(cancel_btn)
-        main_layout.add_widget(history_section)
         
         # === MANO + AZIONE (2 colonne) ===
         game_info = BoxLayout(
@@ -1056,18 +1010,6 @@ class BlackjackApp(App):
     
     def add_card(self, card):
         """Aggiunge carta"""
-        # Salva nello storico prima di aggiungere
-        history_entry = {
-            'card': card,
-            'mode': self.mode,
-            'hand_index': self.current_hand_index if self.mode == 'mio' else None
-        }
-        self.card_history.append(history_entry)
-        
-        # Mantieni solo ultimi 5
-        if len(self.card_history) > 5:
-            self.card_history.pop(0)
-        
         # Aggiungi alla lista appropriata
         if self.mode == "banco":
             self.dealer_cards.append(card)
@@ -1081,34 +1023,6 @@ class BlackjackApp(App):
         self.card_counter.add_card(card)
         
         self.update_display()
-        self.update_history_display()
-    
-    def update_history_display(self):
-        """Aggiorna la visualizzazione dello storico inserimenti"""
-        # Mostra le ultime 5 carte (da sinistra = più vecchia, a destra = più recente)
-        for i in range(5):
-            if i < len(self.card_history):
-                entry = self.card_history[i]
-                card = entry['card']
-                mode = entry['mode']
-                
-                # Nome modalità da mostrare
-                if mode == 'banco':
-                    mode_text = 'B'
-                    color = (0.90, 0.24, 0.24, 1)  # Rosso
-                elif mode == 'mio':
-                    mode_text = 'M'
-                    color = (0.13, 0.82, 0.52, 1)  # Verde
-                else:  # tavolo
-                    mode_text = 'T'
-                    color = (0.93, 0.79, 0.29, 1)  # Giallo
-                
-                self.history_labels[i].text = f"{card}({mode_text})"
-                self.history_labels[i].color = color
-            else:
-                # Slot vuoto
-                self.history_labels[i].text = '-'
-                self.history_labels[i].color = (0.5, 0.5, 0.5, 1)
     
     def activate_split(self):
         """Attiva modalità split - crea una nuova mano dalla carta corrente"""
@@ -1389,10 +1303,6 @@ class BlackjackApp(App):
         self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset storico inserimenti
-        self.card_history = []
-        self.update_history_display()
-        
         # Reset navigazione split
         self.current_hand_index = 0
         self.prev_hand_btn.opacity = 0
@@ -1402,38 +1312,56 @@ class BlackjackApp(App):
         
         self.update_display()
     
-    def undo_hand(self):
-        """Cancella l'ultimo inserimento dallo storico"""
-        if not self.card_history:
-            self.show_toast("Nessun inserimento da cancellare")
-            return
+    def delete_last_card(self):
+        """Cancella l'ultima carta inserita della sezione selezionata (BANCO, MIO o TAVOLO)"""
+        card_to_remove = None
+        section_name = ""
         
-        # Prendi l'ultimo inserimento
-        last_entry = self.card_history.pop()
-        card = last_entry['card']
-        mode = last_entry['mode']
-        hand_index = last_entry['hand_index']
-        
-        # Rimuovi la carta dalla lista appropriata
-        if mode == 'banco':
-            if card in self.dealer_cards:
-                self.dealer_cards.remove(card)
-        elif mode == 'mio':
-            # Rimuovi dalla mano specifica
-            if hand_index is not None and hand_index < len(self.player_hands):
-                if card in self.player_hands[hand_index]:
-                    self.player_hands[hand_index].remove(card)
+        # Determina quale sezione cancellare in base alla modalità selezionata
+        if self.mode == 'banco':
+            if self.dealer_cards:
+                card_to_remove = self.dealer_cards.pop()
+                section_name = "BANCO"
+            else:
+                self.show_toast("Nessuna carta nel BANCO")
+                return
+        elif self.mode == 'mio':
+            # Cancella dall'ultima mano che contiene carte
+            for i in range(len(self.player_hands) - 1, -1, -1):
+                if self.player_hands[i]:
+                    card_to_remove = self.player_hands[i].pop()
+                    section_name = f"MIO (Mano {i+1})"
+                    
+                    # Rimuovi la mano se è vuota e non è la prima
+                    if not self.player_hands[i] and len(self.player_hands) > 1:
+                        self.player_hands.pop(i)
+                        # Aggiusta l'indice se necessario
+                        if self.current_hand_index >= len(self.player_hands):
+                            self.current_hand_index = len(self.player_hands) - 1
+                        # Nascondi bottoni navigazione se rimane solo una mano
+                        if len(self.player_hands) == 1:
+                            self.prev_hand_btn.opacity = 0
+                            self.prev_hand_btn.disabled = True
+                            self.next_hand_btn.opacity = 0
+                            self.next_hand_btn.disabled = True
+                    break
+            
+            if card_to_remove is None:
+                self.show_toast("Nessuna carta nelle tue mani")
+                return
         else:  # tavolo
-            if card in self.table_cards:
-                self.table_cards.remove(card)
+            if self.table_cards:
+                card_to_remove = self.table_cards.pop()
+                section_name = "TAVOLO"
+            else:
+                self.show_toast("Nessuna carta nel TAVOLO")
+                return
         
         # Rimuovi dal contatore
-        self.card_counter.remove_card(card)
-        
-        self.update_display()
-        self.update_history_display()
-        remaining = len(self.card_history)
-        self.show_toast(f"Cancellato {card} ({remaining} nello storico)")
+        if card_to_remove:
+            self.card_counter.remove_card(card_to_remove)
+            self.update_display()
+            self.show_toast(f"Cancellato {card_to_remove} da {section_name}")
     
     def set_table_settings(self):
         """Imposta bankroll e minima tavolo (cambio tavolo)"""
@@ -1511,10 +1439,6 @@ class BlackjackApp(App):
         self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset storico inserimenti
-        self.card_history = []
-        self.update_history_display()
-        
         # Reset navigazione split
         self.current_hand_index = 0
         if hasattr(self, 'prev_hand_btn'):
@@ -1557,10 +1481,6 @@ class BlackjackApp(App):
         self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset storico inserimenti
-        self.card_history = []
-        self.update_history_display()
-        
         # Reset navigazione split
         self.current_hand_index = 0
         if hasattr(self, 'prev_hand_btn'):
@@ -1595,10 +1515,6 @@ class BlackjackApp(App):
         self.dealer_cards = []
         self.player_hands = [[]]
         self.table_cards = []
-        
-        # Reset storico inserimenti
-        self.card_history = []
-        self.update_history_display()
         
         # Reset navigazione split
         self.current_hand_index = 0
