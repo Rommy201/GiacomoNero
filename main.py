@@ -669,7 +669,7 @@ class BlackjackApp(App):
         # Seconda riga: Double e Surrender
         row2 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=38)
         
-        double_win_btn = Button(
+        self.double_win_btn = Button(
             text='2x WIN',
             background_color=(0.18, 0.37, 0.18, 1),
             background_normal='',
@@ -677,10 +677,10 @@ class BlackjackApp(App):
             font_size='11sp',
             bold=True
         )
-        double_win_btn.bind(on_press=lambda x: self.record_result('double_win'))
-        self.make_rounded_button(double_win_btn, radius=8)
+        self.double_win_btn.bind(on_press=lambda x: self.record_result('double_win'))
+        self.make_rounded_button(self.double_win_btn, radius=8)
         
-        double_loss_btn = Button(
+        self.double_loss_btn = Button(
             text='2x LOSS',
             background_color=(0.49, 0.18, 0.18, 1),
             background_normal='',
@@ -688,10 +688,10 @@ class BlackjackApp(App):
             font_size='11sp',
             bold=True
         )
-        double_loss_btn.bind(on_press=lambda x: self.record_result('double_loss'))
-        self.make_rounded_button(double_loss_btn, radius=8)
+        self.double_loss_btn.bind(on_press=lambda x: self.record_result('double_loss'))
+        self.make_rounded_button(self.double_loss_btn, radius=8)
         
-        surrender_btn = Button(
+        self.surrender_btn = Button(
             text='ARRESA',
             background_color=(0.37, 0.35, 0.47, 1),
             background_normal='',
@@ -699,12 +699,12 @@ class BlackjackApp(App):
             font_size='11sp',
             bold=True
         )
-        surrender_btn.bind(on_press=lambda x: self.record_result('surrender'))
-        self.make_rounded_button(surrender_btn, radius=8)
+        self.surrender_btn.bind(on_press=lambda x: self.record_result('surrender'))
+        self.make_rounded_button(self.surrender_btn, radius=8)
         
-        row2.add_widget(double_win_btn)
-        row2.add_widget(double_loss_btn)
-        row2.add_widget(surrender_btn)
+        row2.add_widget(self.double_win_btn)
+        row2.add_widget(self.double_loss_btn)
+        row2.add_widget(self.surrender_btn)
         
         results_section.add_widget(bet_input_box)
         results_section.add_widget(row1)
@@ -1040,25 +1040,41 @@ class BlackjackApp(App):
         self.decks_label.text = f'[b]{decks_left:.1f}[/b] mazzi'
         
         # Mano banco
-        self.dealer_label.text = f"Banco: {', '.join(self.dealer_cards) if self.dealer_cards else '-'}"
+        if self.dealer_cards:
+            dealer_total, dealer_soft = self.calculate_hand_value(self.dealer_cards)
+            if dealer_soft:
+                self.dealer_label.text = f"Banco: {', '.join(self.dealer_cards)} ({dealer_total})"
+            else:
+                self.dealer_label.text = f"Banco: {', '.join(self.dealer_cards)} ({dealer_total})"
+        else:
+            self.dealer_label.text = "Banco: -"
         
         # Mano giocatore (mostra solo la mano corrente)
         current_hand = self.player_hands[self.current_hand_index]
         total_hands = len(self.player_hands)
         
-        if total_hands > 1:
-            # Con split: mostra "Mano X/Y: carte"
-            hand_display = f"Mano {self.current_hand_index + 1}/{total_hands}: {', '.join(current_hand) if current_hand else '-'}"
+        if current_hand:
+            player_total, player_soft = self.calculate_hand_value(current_hand)
+            cards_text = ', '.join(current_hand)
+            
+            if total_hands > 1:
+                # Con split: mostra "Mano X/Y: carte (totale)"
+                hand_display = f"Mano {self.current_hand_index + 1}/{total_hands}: {cards_text} ({player_total})"
+            else:
+                # Senza split: mostra "Io: carte (totale)"
+                hand_display = f"Io: {cards_text} ({player_total})"
         else:
-            # Senza split: mostra "Io: carte"
-            hand_display = f"Io: {', '.join(current_hand) if current_hand else '-'}"
+            if total_hands > 1:
+                hand_display = f"Mano {self.current_hand_index + 1}/{total_hands}: -"
+            else:
+                hand_display = "Io: -"
         
         self.player_label.text = hand_display
         
         self.table_label.text = f"Tavolo: {', '.join(self.table_cards) if self.table_cards else '-'}"
         
-        # Strategia basata sulla mano corrente
-        if self.dealer_cards and current_hand:
+        # Strategia basata sulla mano corrente - solo se il giocatore ha almeno 2 carte
+        if self.dealer_cards and current_hand and len(current_hand) >= 2:
             player_total, is_soft = self.calculate_hand_value(current_hand)
             # Controlla coppia: due carte con stesso valore (es: 10 e Q sono una coppia)
             is_pair = (len(current_hand) == 2 and 
@@ -1070,7 +1086,8 @@ class BlackjackApp(App):
                 self.dealer_cards[0],
                 is_soft,
                 is_pair,
-                true_count
+                true_count,
+                len(current_hand)  # Passa il numero di carte
             )
             
             self.strategy_label.text = f"{suggestion['action']}"

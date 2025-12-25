@@ -197,7 +197,7 @@ class BlackjackStrategy:
         
         return strategy
         
-    def get_suggestion(self, player_total, dealer_card, is_soft=False, is_pair=False, true_count=0):
+    def get_suggestion(self, player_total, dealer_card, is_soft=False, is_pair=False, true_count=0, num_cards=2):
         """
         Ottieni il suggerimento strategico
         
@@ -207,6 +207,7 @@ class BlackjackStrategy:
             is_soft: True se la mano contiene un asso contato come 11
             is_pair: True se le prime due carte sono uguali
             true_count: True Count corrente per aggiustamenti
+            num_cards: numero di carte nella mano del giocatore
             
         Returns:
             dict: {'action': str, 'description': str}
@@ -260,7 +261,13 @@ class BlackjackStrategy:
                 action = self.hard_strategy.get(key, 'HIT')
         
         # Aggiustamenti basati sul True Count (per non-split)
-        action, adjusted = self._adjust_for_count(action, player_total, dealer_card, true_count, is_soft)
+        action, adjusted = self._adjust_for_count(action, player_total, dealer_card, true_count, is_soft, num_cards)
+        
+        # IMPORTANTE: Se hai più di 2 carte, non puoi raddoppiare
+        # (SURRENDER viene gestito dentro _adjust_for_count)
+        if num_cards > 2 and action == 'DOUBLE':
+            action = 'HIT'  # Sostituisci DOUBLE con HIT
+            adjusted = True
         
         # Combina gli adjusted flags
         adjusted = adjusted or adjusted_split
@@ -299,9 +306,12 @@ class BlackjackStrategy:
             adjusted = True
         return action, adjusted
         
-    def _adjust_for_count(self, action, player_total, dealer_card, true_count, is_soft):
+    def _adjust_for_count(self, action, player_total, dealer_card, true_count, is_soft, num_cards=2):
         """
         Aggiusta la strategia in base al True Count (Deviazioni Europee)
+        
+        Args:
+            num_cards: numero di carte nella mano (SURRENDER valido solo con 2 carte)
         
         Returns:
             tuple: (action, adjusted) dove adjusted è True se la strategia è stata modificata
@@ -310,46 +320,47 @@ class BlackjackStrategy:
         
         # Solo per mani hard (non soft)
         if not is_soft:
-            # ===== SURRENDER (RESA) =====
-            # 17 vs A: Arrenditi sempre (strategia di base)
-            if player_total == 17 and dealer_card == 'A':
-                action = 'SURRENDER'
-                adjusted = True
+            # ===== SURRENDER (RESA) - Solo con esattamente 2 carte =====
+            if num_cards == 2:
+                # 17 vs A: Arrenditi sempre (strategia di base)
+                if player_total == 17 and dealer_card == 'A':
+                    action = 'SURRENDER'
+                    adjusted = True
 
-            # 16 vs 8: Arrenditi con TC >= 4+
-            if player_total == 16 and dealer_card == '8' and true_count >= 4:
-                action = 'SURRENDER'
-                adjusted = True
+                # 16 vs 8: Arrenditi con TC >= 4+
+                if player_total == 16 and dealer_card == '8' and true_count >= 4:
+                    action = 'SURRENDER'
+                    adjusted = True
 
-            # 16 vs 9: Arrenditi con TC >= 0+
-            if player_total == 16 and dealer_card == '9' and true_count >= 0:
-                action = 'SURRENDER'
-                adjusted = True
-            
-            # 16 vs 10: Arrenditi con TC >= 0+
-            if player_total == 16 and dealer_card == '10':
-                action = 'SURRENDER'
-                adjusted = True
-            
-            # 16 vs A: Arrenditi sempre (strategia di base)
-            if player_total == 16 and dealer_card == 'A':
-                action = 'SURRENDER'
-                adjusted = True
+                # 16 vs 9: Arrenditi con TC >= 0+
+                if player_total == 16 and dealer_card == '9' and true_count >= 0:
+                    action = 'SURRENDER'
+                    adjusted = True
                 
-            # 15 vs 9: Arrenditi con TC >= 2+
-            if player_total == 15 and dealer_card == '9' and true_count >= 2:
-                action = 'SURRENDER'
-                adjusted = True
-            
-            # 15 vs 10: Arrenditi con TC >= 0
-            if player_total == 15 and dealer_card == '10' and true_count >= 0:
-                action = 'SURRENDER'
-                adjusted = True
-            
-            # 15 vs A: Arrenditi con TC >= -1
-            if player_total == 15 and dealer_card == 'A' and true_count >= -1:
-                action = 'SURRENDER'
-                adjusted = True
+                # 16 vs 10: Arrenditi con TC >= 0+
+                if player_total == 16 and dealer_card == '10':
+                    action = 'SURRENDER'
+                    adjusted = True
+                
+                # 16 vs A: Arrenditi sempre (strategia di base)
+                if player_total == 16 and dealer_card == 'A':
+                    action = 'SURRENDER'
+                    adjusted = True
+                    
+                # 15 vs 9: Arrenditi con TC >= 2+
+                if player_total == 15 and dealer_card == '9' and true_count >= 2:
+                    action = 'SURRENDER'
+                    adjusted = True
+                
+                # 15 vs 10: Arrenditi con TC >= 0
+                if player_total == 15 and dealer_card == '10' and true_count >= 0:
+                    action = 'SURRENDER'
+                    adjusted = True
+                
+                # 15 vs A: Arrenditi con TC >= -1
+                if player_total == 15 and dealer_card == 'A' and true_count >= -1:
+                    action = 'SURRENDER'
+                    adjusted = True
             
             # ===== DEVIAZIONI STRATEGIA BASE (COPPIE PURE) =====
             
