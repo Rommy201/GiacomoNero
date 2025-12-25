@@ -547,10 +547,11 @@ class BlackjackApp(App):
         self.strategy_label = Label(
             text='Inserisci carte',
             color=(1, 1, 1, 1),
-            font_size='17sp',
+            font_size='13sp',
             bold=True,
             halign='center',
-            valign='middle'
+            valign='middle',
+            markup=True
         )
         self.strategy_label.bind(size=self.strategy_label.setter('text_size'))
         
@@ -757,9 +758,22 @@ class BlackjackApp(App):
         self.surrender_btn.bind(on_press=lambda x: self.record_result('surrender'))
         self.make_rounded_button(self.surrender_btn, radius=8)
         
+        # Bottone assicurazione persa
+        self.insurance_loss_btn = Button(
+            text='ASS. PERSA',
+            background_color=(0.80, 0.52, 0.25, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='11sp',
+            bold=True
+        )
+        self.insurance_loss_btn.bind(on_press=lambda x: self.record_insurance_loss())
+        self.make_rounded_button(self.insurance_loss_btn, radius=8)
+        
         row2.add_widget(self.double_win_btn)
         row2.add_widget(self.double_loss_btn)
         row2.add_widget(self.surrender_btn)
+        row2.add_widget(self.insurance_loss_btn)
         
         results_section.add_widget(bet_input_box)
         results_section.add_widget(row1)
@@ -1157,7 +1171,33 @@ class BlackjackApp(App):
                 len(current_hand)  # Passa il numero di carte
             )
             
-            self.strategy_label.text = f"{suggestion['action']}"
+            # Costruisci il testo da mostrare
+            action_text = f"[b][size=18sp]{suggestion['action']}[/size][/b]"
+            
+            # Aggiungi descrizione dettagliata
+            description = suggestion.get('description', '')
+            if description:
+                # Rimuovi le parti già presenti nell'action (per evitare ripetizioni)
+                # e formatta il testo
+                lines = description.split('\n')
+                detail_lines = []
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith(suggestion['action']):
+                        # Evidenzia le informazioni importanti
+                        if line.startswith('ASSICURAZIONE:'):
+                            detail_lines.append(f"[color=F59E0B]{line}[/color]")
+                        elif 'TC=' in line or 'Strategia modificata' in line:
+                            detail_lines.append(f"[color=10B981][size=11sp]{line}[/size][/color]")
+                        elif 'Se non puoi' in line:
+                            detail_lines.append(f"[size=11sp]{line}[/size]")
+                        else:
+                            detail_lines.append(f"[size=12sp]{line}[/size]")
+                
+                if detail_lines:
+                    action_text += '\n' + '\n'.join(detail_lines)
+            
+            self.strategy_label.text = action_text
         else:
             self.strategy_label.text = "Inserisci carte"
         
@@ -1310,6 +1350,23 @@ class BlackjackApp(App):
         self.next_hand_btn.opacity = 0
         self.next_hand_btn.disabled = True
         
+        self.update_display()
+    
+    def record_insurance_loss(self):
+        """Registra la perdita dell'assicurazione (metà della puntata)"""
+        try:
+            bet = float(self.bet_input.text.strip())
+        except:
+            self.show_toast("Puntata non valida")
+            return
+        
+        insurance_amount = bet * 0.5
+        # Sottrai l'assicurazione dal bankroll senza resettare la mano
+        self.card_counter.current_bankroll -= insurance_amount
+        
+        self.show_toast(f"Assicurazione persa. -€{insurance_amount:.0f}")
+        
+        # Aggiorna solo il display, senza resettare le carte
         self.update_display()
     
     def delete_last_card(self):

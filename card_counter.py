@@ -63,9 +63,8 @@ class CardCounter:
     def set_table_minimum(self, minimum):
         """Imposta il minimo del tavolo"""
         self.table_minimum = minimum
-        # Calcola betting unit come 5% del bankroll o minimo*2, quello maggiore
-        suggested_unit = max(self.initial_bankroll * 0.025, minimum * 2)
-        self.betting_unit = suggested_unit
+        # Calcola betting unit come minimo*2
+        self.betting_unit = minimum * 2
     
     def record_hand_result(self, result, bet_amount):
         """Registra il risultato di una mano
@@ -224,9 +223,11 @@ class CardCounter:
             }
         """
         true_count = self.get_true_count()
+        # Arrotonda a 1 decimale per evitare problemi di floating point
+        tc = round(true_count, 1)
         
         # Tabella Bet Spread basata sul True Count
-        if true_count <= -2:
+        if tc <= -2.0:
             # Lasciare il tavolo o puntata minima
             return {
                 'multiplier': 0,
@@ -234,8 +235,8 @@ class CardCounter:
                 'action': 'LEAVE',
                 'description': f'Lascia il tavolo (TC sfavorevole) - {self.table_minimum:.0f}€'
             }
-        elif true_count < 1:
-            # Minimo del tavolo
+        elif tc < 1.0:
+            # Minimo del tavolo (TC < 1.0)
             multiplier = self.table_minimum / self.betting_unit
             return {
                 'multiplier': multiplier,
@@ -243,39 +244,39 @@ class CardCounter:
                 'action': 'MIN_BET',
                 'description': f'Minimo del tavolo - {self.table_minimum:.0f}€'
             }
-        elif true_count < 2:
-            # 1 unità
+        elif tc < 2.0:
+            # 1 unità (TC >= 1.0 e < 2.0)
             return {
                 'multiplier': 1,
                 'bet_amount': self.betting_unit,
                 'action': 'BET',
                 'description': f'1 unità - {self.betting_unit:.0f}€'
             }
-        elif true_count < 3:
-            # 2 unità
+        elif tc < 3.0:
+            # 2 unità (TC >= 2.0 e < 3.0)
             return {
                 'multiplier': 2,
                 'bet_amount': self.betting_unit * 2,
                 'action': 'BET',
                 'description': f'2 unità - {self.betting_unit * 2:.0f}€'
             }
-        elif true_count < 4:
-            # 3 unità
+        elif tc < 4.0:
+            # 3 unità (TC >= 3.0 e < 4.0)
             return {
                 'multiplier': 3,
                 'bet_amount': self.betting_unit * 3,
                 'action': 'BET',
                 'description': f'3 unità - {self.betting_unit * 3:.0f}€'
             }
-        elif true_count < 5:
-            # 4 unità
+        elif tc < 5.0:
+            # 4 unità (TC >= 4.0 e < 5.0)
             return {
                 'multiplier': 4,
                 'bet_amount': self.betting_unit * 4,
                 'action': 'BET',
                 'description': f'4 unità - {self.betting_unit * 4:.0f}€'
             }
-        else:  # TC >= 5
+        else:  # TC >= 5.0
             # 5+ unità
             return {
                 'multiplier': 5,

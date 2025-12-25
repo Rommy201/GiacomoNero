@@ -261,7 +261,7 @@ class BlackjackStrategy:
                 action = self.hard_strategy.get(key, 'HIT')
         
         # Aggiustamenti basati sul True Count (per non-split)
-        action, adjusted = self._adjust_for_count(action, player_total, dealer_card, true_count, is_soft, num_cards)
+        action, adjusted, fallback_action = self._adjust_for_count(action, player_total, dealer_card, true_count, is_soft, num_cards)
         
         # IMPORTANTE: Se hai più di 2 carte, non puoi raddoppiare
         # (SURRENDER viene gestito dentro _adjust_for_count)
@@ -272,12 +272,22 @@ class BlackjackStrategy:
         # Combina gli adjusted flags
         adjusted = adjusted or adjusted_split
         
+        # Controlla se suggerire l'assicurazione
+        insurance_suggestion = None
+        if dealer_card == 'A' and true_count >= 3:
+            insurance_suggestion = f"ASSICURAZIONE: Sì (TC={true_count:.1f} >= 3)"
+        
         # Genera descrizione
-        description = self._get_action_description(action, player_total, dealer_card, adjusted, true_count)
+        description = self._get_action_description(action, player_total, dealer_card, adjusted, true_count, fallback_action)
+        
+        # Aggiungi suggerimento assicurazione alla descrizione se presente
+        if insurance_suggestion:
+            description = insurance_suggestion + "\n\n" + description
         
         return {
             'action': action,
-            'description': description
+            'description': description,
+            'insurance': insurance_suggestion
         }
     
     def _adjust_split_for_count(self, action, pair_card, dealer_card, true_count):
@@ -314,9 +324,14 @@ class BlackjackStrategy:
             num_cards: numero di carte nella mano (SURRENDER valido solo con 2 carte)
         
         Returns:
-            tuple: (action, adjusted) dove adjusted è True se la strategia è stata modificata
+            tuple: (action, adjusted, fallback_action) dove:
+                - action: l'azione principale suggerita
+                - adjusted: True se la strategia è stata modificata
+                - fallback_action: azione alternativa se SURRENDER non è disponibile
         """
         adjusted = False
+        fallback_action = None
+        original_action = action
         
         # Solo per mani hard (non soft)
         if not is_soft:
@@ -324,41 +339,49 @@ class BlackjackStrategy:
             if num_cards == 2:
                 # 17 vs A: Arrenditi sempre (strategia di base)
                 if player_total == 17 and dealer_card == 'A':
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
 
                 # 16 vs 8: Arrenditi con TC >= 4+
                 if player_total == 16 and dealer_card == '8' and true_count >= 4:
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
 
                 # 16 vs 9: Arrenditi con TC >= 0+
                 if player_total == 16 and dealer_card == '9' and true_count >= 0:
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
                 
                 # 16 vs 10: Arrenditi con TC >= 0+
                 if player_total == 16 and dealer_card == '10':
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
                 
                 # 16 vs A: Arrenditi sempre (strategia di base)
                 if player_total == 16 and dealer_card == 'A':
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
                     
                 # 15 vs 9: Arrenditi con TC >= 2+
                 if player_total == 15 and dealer_card == '9' and true_count >= 2:
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
                 
                 # 15 vs 10: Arrenditi con TC >= 0
                 if player_total == 15 and dealer_card == '10' and true_count >= 0:
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
                 
                 # 15 vs A: Arrenditi con TC >= -1
                 if player_total == 15 and dealer_card == 'A' and true_count >= -1:
+                    fallback_action = original_action
                     action = 'SURRENDER'
                     adjusted = True
             
@@ -367,21 +390,30 @@ class BlackjackStrategy:
             
             # 16 vs 9: Stand con TC >= 4+
             if player_total == 16 and dealer_card == '9' and true_count >= 4:
-                if action == 'HIT':
-                    action = 'STAND'
-                    adjusted = True
+                if action == 'HIT' or (action == 'SURRENDER' and fallback_action == 'HIT'):
+                    if action == 'SURRENDER':
+                        fallback_action = 'STAND'
+                    else:
+                        action = 'STAND'
+                        adjusted = True
             
             # 16 vs 10: Stand con TC > 0+
             if player_total == 16 and dealer_card == '10' and true_count > 0:
-                if action == 'HIT':
-                    action = 'STAND'
-                    adjusted = True
+                if action == 'HIT' or (action == 'SURRENDER' and fallback_action == 'HIT'):
+                    if action == 'SURRENDER':
+                        fallback_action = 'STAND'
+                    else:
+                        action = 'STAND'
+                        adjusted = True
                     
             # 15 vs 10: Stand con TC >= 3+
             if player_total == 15 and dealer_card == '10' and true_count >= 3:
-                if action == 'HIT':
-                    action = 'STAND'
-                    adjusted = True
+                if action == 'HIT' or (action == 'SURRENDER' and fallback_action == 'HIT'):
+                    if action == 'SURRENDER':
+                        fallback_action = 'STAND'
+                    else:
+                        action = 'STAND'
+                        adjusted = True
             
             # 13 vs 2: Stand con TC <= -1
             if player_total == 13 and dealer_card == '2' and true_count <= -1:
@@ -457,9 +489,9 @@ class BlackjackStrategy:
                     action = 'DOUBLE'
                     adjusted = True
         
-        return action, adjusted
+        return action, adjusted, fallback_action
         
-    def _get_action_description(self, action, player_total, dealer_card, adjusted, true_count):
+    def _get_action_description(self, action, player_total, dealer_card, adjusted, true_count, fallback_action=None):
         """Genera una descrizione dell'azione suggerita"""
         descriptions = {
             'HIT': 'Chiedi carta',
@@ -479,6 +511,11 @@ class BlackjackStrategy:
         if action == 'DOUBLE':
             desc += "\nSe non puoi raddoppiare, chiedi carta"
         elif action == 'SURRENDER':
-            desc += "\nSe non puoi arrenderti, chiedi carta"
+            # Mostra l'azione alternativa se surrender non è disponibile
+            if fallback_action:
+                fallback_desc = descriptions.get(fallback_action, 'chiedi carta')
+                desc += f"\nSe non puoi arrenderti: {fallback_desc}"
+            else:
+                desc += "\nSe non puoi arrenderti, chiedi carta"
             
         return desc
