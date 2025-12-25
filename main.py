@@ -304,7 +304,7 @@ class BlackjackApp(App):
         )
         
         # Bottoni modalità + Annulla (verticale, sinistra)
-        mode_buttons = BoxLayout(orientation='vertical', size_hint_x=None, width=85, spacing=5)
+        mode_buttons = BoxLayout(orientation='vertical', size_hint_x=0.24, spacing=5)
         
         self.mode_banco_btn = ToggleButton(
             text='BANCO',
@@ -571,10 +571,10 @@ class BlackjackApp(App):
         )
         
         # Input scommessa
-        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=0.22, spacing=6, padding=[0, 0])
+        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=0.18, spacing=6, padding=[0, 0])
         
         bet_label = Label(
-            text='Puntata:',
+            text='Puntata €:',
             color=(0.96, 0.68, 0.35, 1),
             font_size='12sp',
             bold=True,
@@ -586,7 +586,7 @@ class BlackjackApp(App):
         
         initial_bet = self.card_counter.get_bet_multiplier()['bet_amount']
         self.bet_input = TextInput(
-            text=f'{initial_bet:.0f}€',
+            text=f'{initial_bet:.0f}',
             multiline=False,
             font_size='13sp',
             size_hint_x=0.55,
@@ -602,7 +602,7 @@ class BlackjackApp(App):
         bet_input_box.add_widget(Label(size_hint_x=0.17))  # Spacer
         
         # Bottoni risultato
-        row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.39)
+        row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.41)
         
         win_btn = Button(
             text='VINTO',
@@ -655,7 +655,7 @@ class BlackjackApp(App):
         row1.add_widget(bj_btn)
         
         # Seconda riga: Double e Surrender
-        row2 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.39)
+        row2 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.41)
         
         self.double_win_btn = Button(
             text='2x WIN',
@@ -744,7 +744,7 @@ class BlackjackApp(App):
         content.add_widget(title)
         
         # Mazzi rimasti
-        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
+        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
         decks_label = Label(
             text='Mazzi rimasti:',
             color=(1, 1, 1, 1),
@@ -765,7 +765,7 @@ class BlackjackApp(App):
         content.add_widget(decks_box)
         
         # Bankroll
-        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
+        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
         bankroll_label = Label(
             text='Bankroll €:',
             color=(1, 1, 1, 1),
@@ -787,7 +787,7 @@ class BlackjackApp(App):
         content.add_widget(bankroll_box)
         
         # Minimo tavolo
-        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
+        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
         min_bet_label = Label(
             text='Minimo tavolo €:',
             color=(1, 1, 1, 1),
@@ -819,8 +819,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=None,
-            height=45
+            size_hint_y=0.13
         )
         set_table_btn.bind(on_press=lambda x: self.set_table_settings())
         self.make_rounded_button(set_table_btn, radius=10)
@@ -831,7 +830,7 @@ class BlackjackApp(App):
         
         # Bottone reset mano corrente
         reset_hand_btn = Button(
-            text='↺ RESET MANO',
+            text='RESET MANO',
             background_color=(0.965, 0.616, 0.043, 1),  # Amber
             background_normal='',
             color=(0.039, 0.055, 0.102, 1),  # Dark text
@@ -883,8 +882,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=None,
-            height=40
+            size_hint_y=0.12
         )
         self.make_rounded_button(close_btn, radius=8)
         
@@ -1131,7 +1129,7 @@ class BlackjackApp(App):
         # Aggiorna bet input solo all'inizio mano (nessuna mano in gioco)
         all_hands_empty = all(len(hand) == 0 for hand in self.player_hands)
         if all_hands_empty and not self.dealer_cards and not self.table_cards:
-            self.bet_input.text = f"{suggested:.0f}€"
+            self.bet_input.text = f"{suggested:.0f}"
         
         # Mostra/nascondi bottone split
         if len(current_hand) == 2 and len(self.player_hands) < self.max_hands:
@@ -1166,7 +1164,7 @@ class BlackjackApp(App):
     def record_result(self, result):
         """Registra risultato"""
         try:
-            bet = float(self.bet_input.text.replace('€', '').strip())
+            bet = float(self.bet_input.text.strip())
         except:
             self.show_toast("Puntata non valida")
             return
