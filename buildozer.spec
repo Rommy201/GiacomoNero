@@ -12,8 +12,8 @@ package.domain = com.blackjack
 # Directory sorgente
 source.dir = .
 
-# Main file (IMPORTANTE: usa main_kivy.py per Android!)
-source.main = main_kivy.py
+# Main file (IMPORTANTE: usa main.py per Android!)
+source.main = main.py
 
 # Estensioni da includere
 source.include_exts = py,png,jpg,kv,atlas

@@ -14,7 +14,7 @@ Vai su **Actions** → Clicca sull'ultima build → Scarica l'artifact **giacomo
 
 ## 📦 File del Progetto
 
-- `main_kivy.py` - App principale per Android
+- `main.py` - App principale per Android
 - `card_counter.py` - Logica conteggio carte
 - `strategy.py` - Strategia di gioco
 - `buildozer.spec` - Configurazione build Android

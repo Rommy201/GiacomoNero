@@ -115,13 +115,12 @@ class BlackjackApp(App):
         
         # Gestione mani localmente
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []  # Seconda mano dopo split
+        self.player_hands = [[]]  # Lista di mani del giocatore (supporta split multipli)
         self.table_cards = []  # Carte altri giocatori
         
-        # Gestione split
-        self.is_split_hand = False
-        self.current_split_hand = 1  # 1 o 2
+        # Gestione split multipli
+        self.current_hand_index = 0  # Indice della mano corrente
+        self.max_hands = 4  # Massimo 4 mani (come nei casinò reali)
         
         # Container principale - FloatLayout per supportare toast
         root = FloatLayout()
@@ -218,7 +217,7 @@ class BlackjackApp(App):
         )
         
         self.decks_label = Label(
-            text='🃏 [b]6.0[/b] mazzi',
+            text='[b]6.0[/b] mazzi',
             markup=True,
             color=(0.965, 0.616, 0.043, 1),
             font_size='12sp',
@@ -273,7 +272,7 @@ class BlackjackApp(App):
         stats_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=20, spacing=4)
         
         self.hands_summary_label = Label(
-            text='Mani: [color=10B981]✓0[/color] | [color=EF4444]✗0[/color] | [color=9895F3]=0[/color]',
+            text='Mani: [color=10B981]W:0[/color] | [color=EF4444]L:0[/color] | [color=9895F3]D:0[/color]',
             markup=True,
             color=(0.7, 0.7, 0.7, 1),
             font_size='11sp',
@@ -375,7 +374,7 @@ class BlackjackApp(App):
         cards_grid = GridLayout(cols=4, spacing=5, size_hint_x=1)
         
         card_data = [
-            ('A', (0.22, 0.63, 0.41, 1)),
+            ('A', (0.90, 0.24, 0.24, 1)),
             ('2', (0.22, 0.63, 0.41, 1)),
             ('3', (0.22, 0.63, 0.41, 1)),
             ('4', (0.22, 0.63, 0.41, 1)),
@@ -411,7 +410,7 @@ class BlackjackApp(App):
         game_info = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=150,
+            height=200,
             padding=[10, 8],
             spacing=10
         )
@@ -454,7 +453,7 @@ class BlackjackApp(App):
             halign='left',
             valign='middle',
             size_hint_y=None,
-            height=20
+            height=40
         )
         self.player_label.bind(size=self.player_label.setter('text_size'))
         
@@ -462,11 +461,11 @@ class BlackjackApp(App):
         self.player_split_label = Label(
             text='Mano 2: -',
             color=(0.58, 0.88, 0.83, 1),
-            font_size='12sp',
+            font_size='10sp',
             halign='left',
             valign='middle',
             size_hint_y=None,
-            height=22
+            height=20
         )
         self.player_split_label.bind(size=self.player_split_label.setter('text_size'))
         
@@ -475,13 +474,13 @@ class BlackjackApp(App):
             color=(0.6, 0.6, 0.6, 1),
             font_size='11sp',
             halign='left',
-            valign='middle',
+            valign='top',
             size_hint_y=None,
-            height=20
+            height=60
         )
         self.table_label.bind(size=self.table_label.setter('text_size'))
         
-        # Bottoni split
+        # Bottoni split e navigazione
         split_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=26, spacing=2)
         
         self.activate_split_btn = Button(
@@ -495,33 +494,47 @@ class BlackjackApp(App):
         self.activate_split_btn.bind(on_press=lambda x: self.activate_split())
         self.make_rounded_button(self.activate_split_btn, radius=6)
         
-        self.switch_hand_btn = Button(
-            text='MANO 2',
+        # Bottone freccia sinistra per mano precedente
+        self.prev_hand_btn = Button(
+            text='<',
             background_color=(0.26, 0.60, 0.88, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='10sp',
-            bold=True
+            font_size='14sp',
+            bold=True,
+            size_hint_x=0.25
         )
-        self.switch_hand_btn.bind(on_press=lambda x: self.switch_split_hand())
-        self.make_rounded_button(self.switch_hand_btn, radius=6)
+        self.prev_hand_btn.bind(on_press=lambda x: self.navigate_hands(-1))
+        self.make_rounded_button(self.prev_hand_btn, radius=6)
         
+        # Bottone freccia destra per mano successiva
+        self.next_hand_btn = Button(
+            text='>',
+            background_color=(0.26, 0.60, 0.88, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='14sp',
+            bold=True,
+            size_hint_x=0.25
+        )
+        self.next_hand_btn.bind(on_press=lambda x: self.navigate_hands(1))
+        self.make_rounded_button(self.next_hand_btn, radius=6)
+        
+        split_buttons.add_widget(self.prev_hand_btn)
         split_buttons.add_widget(self.activate_split_btn)
-        split_buttons.add_widget(self.switch_hand_btn)
+        split_buttons.add_widget(self.next_hand_btn)
         
         hand_box.add_widget(hand_title)
         hand_box.add_widget(self.dealer_label)
         hand_box.add_widget(self.player_label)
-        hand_box.add_widget(self.player_split_label)
         hand_box.add_widget(self.table_label)
         hand_box.add_widget(split_buttons)
         
-        # Nascondi elementi split all'inizio
-        self.player_split_label.opacity = 0
-        self.player_split_label.size_hint_y = 0
-        self.player_split_label.height = 0
-        self.switch_hand_btn.opacity = 0
-        self.switch_hand_btn.disabled = True
+        # Nascondi bottoni navigazione all'inizio
+        self.prev_hand_btn.opacity = 0
+        self.prev_hand_btn.disabled = True
+        self.next_hand_btn.opacity = 0
+        self.next_hand_btn.disabled = True
         self.activate_split_btn.opacity = 0
         self.activate_split_btn.disabled = True
         
@@ -555,10 +568,6 @@ class BlackjackApp(App):
         )
         self.strategy_label.bind(size=self.strategy_label.setter('text_size'))
         
-        # Spacer per abbassare action_title e allinearlo con hand_title
-        action_spacer = Widget(size_hint_y=None, height=8)
-        
-        action_box.add_widget(action_spacer)
         action_box.add_widget(action_title)
         action_box.add_widget(self.strategy_label)
         
@@ -780,7 +789,7 @@ class BlackjackApp(App):
         )
         initial_bankroll = getattr(self.card_counter, 'initial_bankroll', 100)
         self.bankroll_input = TextInput(
-            text=f'{initial_bankroll:.0f}',
+            text=f'{initial_bankroll:.2f}',
             multiline=False,
             font_size='13sp',
             size_hint_x=0.55,
@@ -936,14 +945,8 @@ class BlackjackApp(App):
         if self.mode == "banco":
             self.dealer_cards.append(card)
         elif self.mode == "mio":
-            # Se split attivo, aggiungi alla mano corrente
-            if self.is_split_hand:
-                if self.current_split_hand == 1:
-                    self.player_cards.append(card)
-                else:
-                    self.player_cards_split.append(card)
-            else:
-                self.player_cards.append(card)
+            # Aggiungi alla mano corrente
+            self.player_hands[self.current_hand_index].append(card)
         else:  # tavolo
             self.table_cards.append(card)
         
@@ -953,39 +956,36 @@ class BlackjackApp(App):
         self.update_display()
     
     def activate_split(self):
-        """Attiva modalità split"""
-        if len(self.player_cards) == 2:
-            # Prendi una carta e mettila nella mano 2
-            self.player_cards_split = [self.player_cards.pop()]
-            self.is_split_hand = True
-            self.current_split_hand = 1
+        """Attiva modalità split - crea una nuova mano dalla carta corrente"""
+        current_hand = self.player_hands[self.current_hand_index]
+        
+        # Controlla se possiamo splittare
+        if len(current_hand) == 2 and len(self.player_hands) < self.max_hands:
+            # Prendi una carta e crea una nuova mano
+            card = current_hand.pop()
+            self.player_hands.append([card])
             
-            # Mostra UI split
-            self.player_split_label.opacity = 1
-            self.player_split_label.size_hint_y = None
-            self.player_split_label.height = 20
-            self.switch_hand_btn.opacity = 1
-            self.switch_hand_btn.disabled = False
-            self.activate_split_btn.opacity = 0
-            self.activate_split_btn.disabled = True
+            # Mostra bottoni navigazione
+            self.prev_hand_btn.opacity = 1
+            self.prev_hand_btn.disabled = False
+            self.next_hand_btn.opacity = 1
+            self.next_hand_btn.disabled = False
             
             self.update_display()
-            self.show_toast("✂️ Split attivato! Gioca Mano 1")
+            total_hands = len(self.player_hands)
+            self.show_toast(f"SPLIT! Ora hai {total_hands} mani")
+        elif len(self.player_hands) >= self.max_hands:
+            self.show_toast(f"Massimo {self.max_hands} mani")
     
-    def switch_split_hand(self):
-        """Passa da una mano all'altra"""
-        if self.current_split_hand == 1:
-            self.current_split_hand = 2
-            self.switch_hand_btn.text = "🔀 Mano 1"
-            self.switch_hand_btn.background_color = (0.23, 0.49, 0.37, 1)
-            self.show_toast("Giocando Mano 2")
-        else:
-            self.current_split_hand = 1
-            self.switch_hand_btn.text = "🔀 Mano 2"
-            self.switch_hand_btn.background_color = (0.26, 0.60, 0.88, 1)
-            self.show_toast("Giocando Mano 1")
+    def navigate_hands(self, direction):
+        """Naviga tra le mani (-1 per precedente, +1 per successiva)"""
+        new_index = self.current_hand_index + direction
         
-        self.update_display()
+        # Verifica limiti
+        if 0 <= new_index < len(self.player_hands):
+            self.current_hand_index = new_index
+            self.update_display()
+            self.show_toast(f"Giocando Mano {self.current_hand_index + 1}/{len(self.player_hands)}")
     
     def get_card_value(self, card):
         """Ottiene il valore numerico di una carta per il confronto"""
@@ -1035,33 +1035,32 @@ class BlackjackApp(App):
         decks_remaining = getattr(self.card_counter, 'decks_remaining', 6)
         decks_used = cards_seen / 52
         decks_left = max(decks_remaining - decks_used, 0)
-        self.decks_label.text = f'🃏 [b]{decks_left:.1f}[/b] mazzi'
+        self.decks_label.text = f'[b]{decks_left:.1f}[/b] mazzi'
         
-        # Mano
+        # Mano banco
         self.dealer_label.text = f"Banco: {', '.join(self.dealer_cards) if self.dealer_cards else '-'}"
         
-        # Mano 1
-        if self.is_split_hand:
-            self.player_label.text = f"Mano 1: {', '.join(self.player_cards) if self.player_cards else '-'}"
-        else:
-            self.player_label.text = f"Io: {', '.join(self.player_cards) if self.player_cards else '-'}"
+        # Mano giocatore (mostra solo la mano corrente)
+        current_hand = self.player_hands[self.current_hand_index]
+        total_hands = len(self.player_hands)
         
-        # Mano 2 (se split attivo)
-        if self.is_split_hand:
-            self.player_split_label.text = f"Mano 2: {', '.join(self.player_cards_split) if self.player_cards_split else '-'}"
+        if total_hands > 1:
+            # Con split: mostra "Mano X/Y: carte"
+            hand_display = f"Mano {self.current_hand_index + 1}/{total_hands}: {', '.join(current_hand) if current_hand else '-'}"
+        else:
+            # Senza split: mostra "Io: carte"
+            hand_display = f"Io: {', '.join(current_hand) if current_hand else '-'}"
+        
+        self.player_label.text = hand_display
         
         self.table_label.text = f"Tavolo: {', '.join(self.table_cards) if self.table_cards else '-'}"
         
-        # Strategia basata sulla mano attiva
-        active_hand = self.player_cards
-        if self.is_split_hand and self.current_split_hand == 2:
-            active_hand = self.player_cards_split
-        
-        if self.dealer_cards and active_hand:
-            player_total, is_soft = self.calculate_hand_value(active_hand)
+        # Strategia basata sulla mano corrente
+        if self.dealer_cards and current_hand:
+            player_total, is_soft = self.calculate_hand_value(current_hand)
             # Controlla coppia: due carte con stesso valore (es: 10 e Q sono una coppia)
-            is_pair = (len(active_hand) == 2 and 
-                      self.get_card_value(active_hand[0]) == self.get_card_value(active_hand[1]))
+            is_pair = (len(current_hand) == 2 and 
+                      self.get_card_value(current_hand[0]) == self.get_card_value(current_hand[1]))
             true_count = self.card_counter.get_true_count()
             
             suggestion = self.strategy.get_suggestion(
@@ -1081,18 +1080,18 @@ class BlackjackApp(App):
         initial_bankroll = getattr(self.card_counter, 'initial_bankroll', 100)
         profit = bankroll - initial_bankroll
         
-        self.bankroll_label.text = f"[b]€{bankroll:.0f}[/b]"
+        self.bankroll_label.text = f"[b]€{bankroll:.2f}[/b]"
         
         # Colora profitto
         if profit > 0:
             profit_color = (0.28, 0.73, 0.44, 1)  # verde
-            self.profit_label.text = f"(+€{profit:.0f})"
+            self.profit_label.text = f"(+€{profit:.2f})"
         elif profit < 0:
             profit_color = (0.90, 0.24, 0.24, 1)  # rosso
-            self.profit_label.text = f"(€{profit:.0f})"
+            self.profit_label.text = f"(€{profit:.2f})"
         else:
             profit_color = (0.6, 0.6, 0.6, 1)  # grigio
-            self.profit_label.text = "(+€0)"
+            self.profit_label.text = "(+€0.00)"
         self.profit_label.color = profit_color
         
         # Statistiche mani
@@ -1102,7 +1101,7 @@ class BlackjackApp(App):
         hands_pushed = getattr(self.card_counter, 'hands_pushed', 0)
         
         # Riepilogo mani con colori
-        self.hands_summary_label.text = f'Mani: [color=10B981]✓{hands_won}[/color] | [color=EF4444]✗{hands_lost}[/color] | [color=9895F3]={hands_pushed}[/color]'
+        self.hands_summary_label.text = f'Mani: [color=10B981]W:{hands_won}[/color] | [color=EF4444]L:{hands_lost}[/color] | [color=9895F3]D:{hands_pushed}[/color]'
         
         if hands_played > 0:
             winrate = (hands_won / hands_played) * 100
@@ -1128,14 +1127,15 @@ class BlackjackApp(App):
         self.suggested_bet_label.text = sugg_text
         self.suggested_bet_label.color = sugg_color
         
-        # Aggiorna bet input solo all'inizio mano (nessuna carta in gioco)
-        if not self.player_cards and not self.dealer_cards and not self.player_cards_split and not self.table_cards:
+        # Aggiorna bet input solo all'inizio mano (nessuna mano in gioco)
+        all_hands_empty = all(len(hand) == 0 for hand in self.player_hands)
+        if all_hands_empty and not self.dealer_cards and not self.table_cards:
             self.bet_input.text = f"{suggested:.0f}€"
         
         # Mostra/nascondi bottone split
-        if len(self.player_cards) == 2 and not self.is_split_hand:
+        if len(current_hand) == 2 and len(self.player_hands) < self.max_hands:
             # Controlla se è una coppia (stesso valore)
-            if self.get_card_value(self.player_cards[0]) == self.get_card_value(self.player_cards[1]):
+            if self.get_card_value(current_hand[0]) == self.get_card_value(current_hand[1]):
                 self.activate_split_btn.opacity = 1
                 self.activate_split_btn.disabled = False
             else:
@@ -1144,75 +1144,85 @@ class BlackjackApp(App):
         else:
             self.activate_split_btn.opacity = 0
             self.activate_split_btn.disabled = True
+        
+        # Abilita/disabilita bottoni navigazione
+        if total_hands > 1:
+            # Mostra sempre i bottoni quando ci sono più mani
+            self.prev_hand_btn.opacity = 1
+            self.next_hand_btn.opacity = 1
+            
+            # Disabilita freccia sinistra se siamo alla prima mano
+            self.prev_hand_btn.disabled = (self.current_hand_index == 0)
+            # Disabilita freccia destra se siamo all'ultima mano
+            self.next_hand_btn.disabled = (self.current_hand_index == total_hands - 1)
+        else:
+            # Nascondi i bottoni se c'è solo una mano
+            self.prev_hand_btn.opacity = 0
+            self.prev_hand_btn.disabled = True
+            self.next_hand_btn.opacity = 0
+            self.next_hand_btn.disabled = True
     
     def record_result(self, result):
         """Registra risultato"""
         try:
             bet = float(self.bet_input.text.replace('€', '').strip())
         except:
-            self.show_toast("⚠ Puntata non valida")
+            self.show_toast("Puntata non valida")
             return
         
         if result == 'win':
             self.card_counter.record_hand_result('win', bet)
-            self.show_toast(f"✓ Mano vinta! +€{bet:.0f}")
+            self.show_toast(f"Mano vinta! +€{bet:.0f}")
         elif result == 'lose':
             self.card_counter.record_hand_result('loss', bet)
-            self.show_toast(f"✗ Mano persa. -€{bet:.0f}")
+            self.show_toast(f"Mano persa. -€{bet:.0f}")
         elif result == 'push':
             self.card_counter.record_hand_result('push', bet)
             self.show_toast("= Pareggio (€0)")
         elif result == 'blackjack':
             self.card_counter.record_hand_result('blackjack', bet)
             blackjack_win = bet * 1.5
-            self.show_toast(f"♠ BLACKJACK! +€{blackjack_win:.0f}")
+            self.show_toast(f"BLACKJACK! +€{blackjack_win:.0f}")
         elif result == 'double_win':
             self.card_counter.record_hand_result('win', bet * 2)
-            self.show_toast(f"💰 Raddoppio vinto! +€{bet * 2:.0f}")
+            self.show_toast(f"Raddoppio vinto! +€{bet * 2:.0f}")
         elif result == 'double_loss':
             self.card_counter.record_hand_result('loss', bet * 2)
-            self.show_toast(f"💸 Raddoppio perso. -€{bet * 2:.0f}")
+            self.show_toast(f"Raddoppio perso. -€{bet * 2:.0f}")
         elif result == 'surrender':
             self.card_counter.record_hand_result('loss', bet * 0.5)
-            self.show_toast(f"🏳 Arresa. -€{bet * 0.5:.0f}")
+            self.show_toast(f"Arresa. -€{bet * 0.5:.0f}")
         
         # Reset mani
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []
+        self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset split
-        self.is_split_hand = False
-        self.current_split_hand = 1
-        self.player_split_label.opacity = 0
-        self.player_split_label.size_hint_y = 0
-        self.player_split_label.height = 0
-        self.switch_hand_btn.opacity = 0
-        self.switch_hand_btn.disabled = True
-        self.switch_hand_btn.text = "🔀 Mano 2"
-        self.switch_hand_btn.background_color = (0.26, 0.60, 0.88, 1)
+        # Reset navigazione split
+        self.current_hand_index = 0
+        self.prev_hand_btn.opacity = 0
+        self.prev_hand_btn.disabled = True
+        self.next_hand_btn.opacity = 0
+        self.next_hand_btn.disabled = True
         
         self.update_display()
     
     def undo_hand(self):
         """Annulla ultima mano"""
         # Rimuovi l'ultima carta aggiunta dalla mano corrente
-        if self.is_split_hand and self.current_split_hand == 2 and self.player_cards_split:
-            last_card = self.player_cards_split.pop()
+        current_hand = self.player_hands[self.current_hand_index]
+        if current_hand:
+            last_card = current_hand.pop()
             self.card_counter.remove_card(last_card)
         elif self.dealer_cards:
             last_card = self.dealer_cards.pop()
-            self.card_counter.remove_card(last_card)
-        elif self.player_cards:
-            last_card = self.player_cards.pop()
             self.card_counter.remove_card(last_card)
         elif self.table_cards:
             last_card = self.table_cards.pop()
             self.card_counter.remove_card(last_card)
         
         self.update_display()
-        self.show_toast("↶ Annullato")
+        self.show_toast("<- Annullato")
     
     def set_table_settings(self):
         """Imposta bankroll e minima tavolo (cambio tavolo)"""
@@ -1228,25 +1238,23 @@ class BlackjackApp(App):
         
         # Reset mani correnti
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []
+        self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset split
-        self.is_split_hand = False
-        self.current_split_hand = 1
-        if hasattr(self, 'player_split_label'):
-            self.player_split_label.opacity = 0
-            self.player_split_label.height = 0
-        if hasattr(self, 'switch_hand_btn'):
-            self.switch_hand_btn.opacity = 0
-            self.switch_hand_btn.disabled = True
+        # Reset navigazione split
+        self.current_hand_index = 0
+        if hasattr(self, 'prev_hand_btn'):
+            self.prev_hand_btn.opacity = 0
+            self.prev_hand_btn.disabled = True
+        if hasattr(self, 'next_hand_btn'):
+            self.next_hand_btn.opacity = 0
+            self.next_hand_btn.disabled = True
         if hasattr(self, 'activate_split_btn'):
             self.activate_split_btn.opacity = 0
             self.activate_split_btn.disabled = True
         
         self.update_display()
-        self.show_toast(f"✓ Tavolo: Bankroll €{bankroll:.0f}, Min €{min_bet:.0f}")
+        self.show_toast(f"Tavolo: Bankroll €{bankroll:.2f}, Min €{min_bet:.0f}")
         
         # Chiudi popup setup
         if hasattr(self, 'setup_popup'):
@@ -1272,25 +1280,23 @@ class BlackjackApp(App):
         
         # Reset mani correnti
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []
+        self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset split
-        self.is_split_hand = False
-        self.current_split_hand = 1
-        if hasattr(self, 'player_split_label'):
-            self.player_split_label.opacity = 0
-            self.player_split_label.height = 0
-        if hasattr(self, 'switch_hand_btn'):
-            self.switch_hand_btn.opacity = 0
-            self.switch_hand_btn.disabled = True
+        # Reset navigazione split
+        self.current_hand_index = 0
+        if hasattr(self, 'prev_hand_btn'):
+            self.prev_hand_btn.opacity = 0
+            self.prev_hand_btn.disabled = True
+        if hasattr(self, 'next_hand_btn'):
+            self.next_hand_btn.opacity = 0
+            self.next_hand_btn.disabled = True
         if hasattr(self, 'activate_split_btn'):
             self.activate_split_btn.opacity = 0
             self.activate_split_btn.disabled = True
         
         self.update_display()
-        self.show_toast(f"🃏 Nuova shoe ({decks:.0f} mazzi)")
+        self.show_toast(f"Nuova shoe ({decks:.0f} mazzi)")
         
         # Chiudi popup setup
         if hasattr(self, 'setup_popup'):
@@ -1316,25 +1322,23 @@ class BlackjackApp(App):
         
         # Reset mani correnti
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []
+        self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset split
-        self.is_split_hand = False
-        self.current_split_hand = 1
-        if hasattr(self, 'player_split_label'):
-            self.player_split_label.opacity = 0
-            self.player_split_label.height = 0
-        if hasattr(self, 'switch_hand_btn'):
-            self.switch_hand_btn.opacity = 0
-            self.switch_hand_btn.disabled = True
+        # Reset navigazione split
+        self.current_hand_index = 0
+        if hasattr(self, 'prev_hand_btn'):
+            self.prev_hand_btn.opacity = 0
+            self.prev_hand_btn.disabled = True
+        if hasattr(self, 'next_hand_btn'):
+            self.next_hand_btn.opacity = 0
+            self.next_hand_btn.disabled = True
         if hasattr(self, 'activate_split_btn'):
             self.activate_split_btn.opacity = 0
             self.activate_split_btn.disabled = True
         
         self.update_display()
-        self.show_toast("🔄 Reset completo")
+        self.show_toast("Reset completo")
         
         # Chiudi popup setup
         if hasattr(self, 'setup_popup'):
@@ -1345,34 +1349,31 @@ class BlackjackApp(App):
         # Rimuovi tutte le carte della mano corrente dal conteggio
         for card in self.dealer_cards:
             self.card_counter.remove_card(card)
-        for card in self.player_cards:
-            self.card_counter.remove_card(card)
-        for card in self.player_cards_split:
-            self.card_counter.remove_card(card)
+        for hand in self.player_hands:
+            for card in hand:
+                self.card_counter.remove_card(card)
         for card in self.table_cards:
             self.card_counter.remove_card(card)
         
         # Reset mani correnti
         self.dealer_cards = []
-        self.player_cards = []
-        self.player_cards_split = []
+        self.player_hands = [[]]
         self.table_cards = []
         
-        # Reset split
-        self.is_split_hand = False
-        self.current_split_hand = 1
-        if hasattr(self, 'player_split_label'):
-            self.player_split_label.opacity = 0
-            self.player_split_label.height = 0
-        if hasattr(self, 'switch_hand_btn'):
-            self.switch_hand_btn.opacity = 0
-            self.switch_hand_btn.disabled = True
+        # Reset navigazione split
+        self.current_hand_index = 0
+        if hasattr(self, 'prev_hand_btn'):
+            self.prev_hand_btn.opacity = 0
+            self.prev_hand_btn.disabled = True
+        if hasattr(self, 'next_hand_btn'):
+            self.next_hand_btn.opacity = 0
+            self.next_hand_btn.disabled = True
         if hasattr(self, 'activate_split_btn'):
             self.activate_split_btn.opacity = 0
             self.activate_split_btn.disabled = True
         
         self.update_display()
-        self.show_toast("↺ Mano resettata")
+        self.show_toast("Mano resettata")
         
         # Chiudi popup setup
         if hasattr(self, 'setup_popup'):
