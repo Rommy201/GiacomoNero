@@ -166,8 +166,9 @@ class BlackjackApp(App):
         header.add_widget(setup_btn)
         content.add_widget(header)
         
-        # Layout principale - si espande per riempire lo spazio disponibile
-        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6, size_hint_y=1)
+        # Layout principale - si adatta al contenuto
+        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6, size_hint_y=None)
+        main_layout.bind(minimum_height=main_layout.setter('height'))
         
         # === CONTATORI E BANKROLL (2 colonne) ===
         count_section = BoxLayout(
@@ -712,6 +713,10 @@ class BlackjackApp(App):
         
         # Aggiungi main_layout al content
         content.add_widget(main_layout)
+        
+        # Widget spacer per riempire lo spazio vuoto rimanente e mantenere il contenuto in alto
+        spacer = Widget(size_hint_y=1)
+        content.add_widget(spacer)
         
         # Aggiungi content al root FloatLayout
         root.add_widget(content)
