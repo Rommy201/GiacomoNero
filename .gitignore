@@ -6,6 +6,7 @@ __pycache__/
 .Python
 venv/
 env/
+dist/
 
 # Buildozer
 .buildozer/
@@ -18,3 +19,5 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+GiacomoNero.spec
