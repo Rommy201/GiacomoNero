@@ -212,6 +212,9 @@ class BlackjackStrategy:
         Returns:
             dict: {'action': str, 'description': str}
         """
+        # Arrotonda il True Count a 1 decimale per evitare problemi di floating point
+        true_count = round(true_count, 1)
+        
         # Normalizza la carta del dealer
         if dealer_card in ['J', 'Q', 'K']:
             dealer_card = '10'
