@@ -18,17 +18,20 @@ source.main = main_kivy.py
 # Estensioni da includere
 source.include_exts = py,png,jpg,kv,atlas
 
+# Pattern di inclusione specifici per assicurarsi che tutti i file Python siano inclusi
+source.include_patterns = *.py,card_counter.py,strategy.py
+
 # Versione
 version = 1.0
 
 # Requisiti Python (versioni automatiche per massima compatibilità)
-requirements = python3,kivy
+requirements = python3,kivy==2.2.1
 
 # Orientamento (portrait = verticale, landscape = orizzontale)
 orientation = portrait
 
-# Permessi (non necessari per questa app, ma utili)
-# android.permissions = 
+# Permessi Android (aggiungi WRITE_EXTERNAL_STORAGE per sicurezza)
+android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
 # Servizi
 # android.permissions = INTERNET
