@@ -166,11 +166,8 @@ class BlackjackApp(App):
         header.add_widget(setup_btn)
         content.add_widget(header)
         
-        # ScrollView per il contenuto
-        scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False)
-        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6, size_hint_y=None)
-        main_layout.bind(minimum_height=main_layout.setter('height'))
-        scroll.add_widget(main_layout)
+        # Layout principale - si espande per riempire lo spazio disponibile
+        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6, size_hint_y=1)
         
         # === CONTATORI E BANKROLL (2 colonne) ===
         count_section = BoxLayout(
@@ -713,8 +710,8 @@ class BlackjackApp(App):
         results_section.add_widget(row2)
         main_layout.add_widget(results_section)
         
-        # Aggiungi scroll al content
-        content.add_widget(scroll)
+        # Aggiungi main_layout al content
+        content.add_widget(main_layout)
         
         # Aggiungi content al root FloatLayout
         root.add_widget(content)
