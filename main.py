@@ -131,8 +131,7 @@ class BlackjackApp(App):
         # === HEADER FISSO CON BOTTONE SETUP ===
         header = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=40,
+            size_hint_y=0.05,
             padding=[10, 6],
             spacing=5
         )
@@ -166,23 +165,19 @@ class BlackjackApp(App):
         header.add_widget(setup_btn)
         content.add_widget(header)
         
-        # Layout principale con ScrollView per gestire correttamente l'overflow
-        scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False, bar_width=0)
-        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6, size_hint_y=None)
-        main_layout.bind(minimum_height=main_layout.setter('height'))
-        scroll.add_widget(main_layout)
+        # Layout principale con altezze flessibili per adattarsi a schermi diversi
+        main_layout = BoxLayout(orientation='vertical', padding=0, spacing=6)
         
         # === CONTATORI E BANKROLL (2 colonne) ===
         count_section = BoxLayout(
             orientation='vertical',
-            size_hint_y=None,
-            height=90,
+            size_hint_y=0.11,
             padding=[10, 8],
             spacing=6
         )
         
         # Prima riga: Contatori compatti
-        counters_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=28, spacing=6)
+        counters_row = BoxLayout(orientation='horizontal', size_hint_y=0.35, spacing=6)
         
         self.rc_label = Label(
             text='RC: [b]0[/b]',
@@ -230,7 +225,7 @@ class BlackjackApp(App):
         counters_row.add_widget(self.decks_label)
         
         # Seconda riga: Bankroll e profitto
-        bankroll_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=26, spacing=8)
+        bankroll_row = BoxLayout(orientation='horizontal', size_hint_y=0.32, spacing=8)
         
         self.bankroll_label = Label(
             text='[b]€100[/b]',
@@ -269,7 +264,7 @@ class BlackjackApp(App):
         bankroll_row.add_widget(self.suggested_bet_label)
         
         # Terza riga: Riepilogo mani
-        stats_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=20, spacing=4)
+        stats_row = BoxLayout(orientation='horizontal', size_hint_y=0.25, spacing=4)
         
         self.hands_summary_label = Label(
             text='Mani: [color=10B981]W:0[/color] | [color=EF4444]L:0[/color] | [color=9895F3]D:0[/color]',
@@ -303,8 +298,7 @@ class BlackjackApp(App):
         # === CARTE + BOTTONI MODALITÀ ===
         cards_section = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=195,
+            size_hint_y=0.24,
             padding=[10, 8],
             spacing=10
         )
@@ -409,8 +403,7 @@ class BlackjackApp(App):
         # === MANO + AZIONE (2 colonne) ===
         game_info = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=200,
+            size_hint_y=0.25,
             padding=[10, 8],
             spacing=10
         )
@@ -428,8 +421,7 @@ class BlackjackApp(App):
             markup=True,
             color=(0.28, 0.73, 0.44, 1),
             font_size='11sp',
-            size_hint_y=None,
-            height=20,
+            size_hint_y=0.12,
             halign='center',
             valign='top'
         )
@@ -441,8 +433,7 @@ class BlackjackApp(App):
             font_size='12sp',
             halign='left',
             valign='middle',
-            size_hint_y=None,
-            height=22
+            size_hint_y=0.13
         )
         self.dealer_label.bind(size=self.dealer_label.setter('text_size'))
         
@@ -452,8 +443,7 @@ class BlackjackApp(App):
             font_size='10sp',
             halign='left',
             valign='middle',
-            size_hint_y=None,
-            height=40
+            size_hint_y=0.24
         )
         self.player_label.bind(size=self.player_label.setter('text_size'))
         
@@ -464,8 +454,7 @@ class BlackjackApp(App):
             font_size='10sp',
             halign='left',
             valign='middle',
-            size_hint_y=None,
-            height=20
+            size_hint_y=0.12
         )
         self.player_split_label.bind(size=self.player_split_label.setter('text_size'))
         
@@ -475,13 +464,12 @@ class BlackjackApp(App):
             font_size='11sp',
             halign='left',
             valign='top',
-            size_hint_y=None,
-            height=60
+            size_hint_y=0.35
         )
         self.table_label.bind(size=self.table_label.setter('text_size'))
         
         # Bottoni split e navigazione
-        split_buttons = BoxLayout(orientation='horizontal', size_hint_y=None, height=26, spacing=2)
+        split_buttons = BoxLayout(orientation='horizontal', size_hint_y=0.16, spacing=2)
         
         self.activate_split_btn = Button(
             text='SPLIT',
@@ -551,8 +539,7 @@ class BlackjackApp(App):
             markup=True,
             color=(0.96, 0.68, 0.35, 1),
             font_size='11sp',
-            size_hint_y=None,
-            height=20,
+            size_hint_y=0.12,
             halign='center',
             valign='top'
         )
@@ -578,14 +565,13 @@ class BlackjackApp(App):
         # === RISULTATI CON INPUT SCOMMESSA ===
         results_section = BoxLayout(
             orientation='vertical',
-            size_hint_y=None,
-            height=159,
+            size_hint_y=0.20,
             padding=[10, 12, 10, 10],
             spacing=8
         )
         
         # Input scommessa
-        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=32, spacing=6, padding=[0, 0])
+        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=0.22, spacing=6, padding=[0, 0])
         
         bet_label = Label(
             text='Puntata:',
@@ -616,7 +602,7 @@ class BlackjackApp(App):
         bet_input_box.add_widget(Label(size_hint_x=0.17))  # Spacer
         
         # Bottoni risultato
-        row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=38)
+        row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.39)
         
         win_btn = Button(
             text='VINTO',
@@ -669,7 +655,7 @@ class BlackjackApp(App):
         row1.add_widget(bj_btn)
         
         # Seconda riga: Double e Surrender
-        row2 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=38)
+        row2 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.39)
         
         self.double_win_btn = Button(
             text='2x WIN',
@@ -713,8 +699,8 @@ class BlackjackApp(App):
         results_section.add_widget(row2)
         main_layout.add_widget(results_section)
         
-        # Aggiungi scroll al content
-        content.add_widget(scroll)
+        # Aggiungi main_layout direttamente al content
+        content.add_widget(main_layout)
         
         # Aggiungi content al root FloatLayout
         root.add_widget(content)
@@ -753,13 +739,12 @@ class BlackjackApp(App):
             markup=True,
             color=(0.3, 0.8, 0.77, 1),
             font_size='14sp',
-            size_hint_y=None,
-            height=30
+            size_hint_y=0.10
         )
         content.add_widget(title)
         
         # Mazzi rimasti
-        decks_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=10)
+        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
         decks_label = Label(
             text='Mazzi rimasti:',
             color=(1, 1, 1, 1),
@@ -780,7 +765,7 @@ class BlackjackApp(App):
         content.add_widget(decks_box)
         
         # Bankroll
-        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=10)
+        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
         bankroll_label = Label(
             text='Bankroll €:',
             color=(1, 1, 1, 1),
@@ -802,7 +787,7 @@ class BlackjackApp(App):
         content.add_widget(bankroll_box)
         
         # Minimo tavolo
-        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=10)
+        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.14, spacing=10)
         min_bet_label = Label(
             text='Minimo tavolo €:',
             color=(1, 1, 1, 1),
@@ -852,8 +837,7 @@ class BlackjackApp(App):
             color=(0.039, 0.055, 0.102, 1),  # Dark text
             font_size='12sp',
             bold=True,
-            size_hint_y=None,
-            height=45
+            size_hint_y=0.16
         )
         reset_hand_btn.bind(on_press=lambda x: self.reset_current_hand())
         self.make_rounded_button(reset_hand_btn, radius=10)
@@ -863,7 +847,7 @@ class BlackjackApp(App):
         content.add_widget(Label(size_hint_y=0.1))
         
         # Bottoni azioni
-        actions_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=45, spacing=8)
+        actions_row = BoxLayout(orientation='horizontal', size_hint_y=0.16, spacing=8)
         
         new_shoe_btn = Button(
             text='NUOVA SHOE',
