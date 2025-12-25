@@ -122,6 +122,9 @@ class BlackjackApp(App):
         self.current_hand_index = 0  # Indice della mano corrente
         self.max_hands = 4  # Massimo 4 mani (come nei casinò reali)
         
+        # Storico inserimenti per undo (ultimi 5)
+        self.card_history = []  # Lista di dict: {'card': carta, 'mode': modalità, 'hand_index': indice_mano}
+        
         # Container principale - FloatLayout per supportare toast
         root = FloatLayout()
         
@@ -252,7 +255,7 @@ class BlackjackApp(App):
             text='Sugg: [b]€10[/b]',
             markup=True,
             color=(0.93, 0.79, 0.29, 1),
-            font_size='11sp',
+            font_size='12sp',
             halign='right',
             valign='middle',
             size_hint_x=0.3
@@ -270,7 +273,7 @@ class BlackjackApp(App):
             text='Mani: [color=10B981]W:0[/color] | [color=EF4444]L:0[/color] | [color=9895F3]D:0[/color]',
             markup=True,
             color=(0.7, 0.7, 0.7, 1),
-            font_size='11sp',
+            font_size='12sp',
             halign='left',
             valign='middle',
             size_hint_x=0.7
@@ -280,7 +283,7 @@ class BlackjackApp(App):
         self.winrate_label = Label(
             text='WR: 0%',
             color=(0.7, 0.7, 0.7, 1),
-            font_size='11sp',
+            font_size='12sp',
             halign='right',
             valign='middle',
             size_hint_x=0.3
@@ -310,12 +313,12 @@ class BlackjackApp(App):
             text='BANCO',
             group='mode',
             state='down',
-            background_color=(0.90, 0.24, 0.24, 1),
+            background_color=(0.13, 0.82, 0.52, 1),
             background_normal='',
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.25
+            size_hint_y=0.33
         )
         self.mode_banco_btn.bind(on_press=lambda x: self.set_mode('banco'))
         self.make_rounded_button(self.mode_banco_btn, radius=8)
@@ -323,12 +326,12 @@ class BlackjackApp(App):
         self.mode_mio_btn = ToggleButton(
             text='MIO',
             group='mode',
-            background_color=(0.12, 0.35, 0.23, 1),
+            background_color=(0.2, 0.22, 0.25, 1),
             background_normal='',
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.25
+            size_hint_y=0.33
         )
         self.mode_mio_btn.bind(on_press=lambda x: self.set_mode('mio'))
         self.make_rounded_button(self.mode_mio_btn, radius=8)
@@ -336,33 +339,19 @@ class BlackjackApp(App):
         self.mode_tavolo_btn = ToggleButton(
             text='TAVOLO',
             group='mode',
-            background_color=(0.55, 0.42, 0.12, 1),
-            background_normal='',
-            color=(1, 1, 1, 1),
-            font_size='11sp',
-            bold=True,
-            size_hint_y=0.25
-        )
-        self.mode_tavolo_btn.bind(on_press=lambda x: self.set_mode('tavolo'))
-        self.make_rounded_button(self.mode_tavolo_btn, radius=8)
-        
-        # Bottone ANNULLA sotto i radio
-        undo_btn = Button(
-            text='UNDO',
-            background_color=(0.3, 0.8, 0.77, 1),
+            background_color=(0.2, 0.22, 0.25, 1),
             background_normal='',
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.25
+            size_hint_y=0.33
         )
-        undo_btn.bind(on_press=lambda x: self.undo_hand())
-        self.make_rounded_button(undo_btn, radius=8)
+        self.mode_tavolo_btn.bind(on_press=lambda x: self.set_mode('tavolo'))
+        self.make_rounded_button(self.mode_tavolo_btn, radius=8)
         
         mode_buttons.add_widget(self.mode_banco_btn)
         mode_buttons.add_widget(self.mode_mio_btn)
         mode_buttons.add_widget(self.mode_tavolo_btn)
-        mode_buttons.add_widget(undo_btn)
         
         # Griglia carte 4x4 (13 carte)
         cards_grid = GridLayout(cols=4, spacing=5, size_hint_x=1)
@@ -400,6 +389,62 @@ class BlackjackApp(App):
         cards_section.add_widget(cards_grid)
         main_layout.add_widget(cards_section)
         
+        # === STORICO ULTIMI INSERIMENTI ===
+        history_section = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.045,
+            padding=[10, 4],
+            spacing=4
+        )
+        
+        history_label = Label(
+            text='Ultimi inserimenti:',
+            color=(0.7, 0.7, 0.7, 1),
+            font_size='10sp',
+            size_hint_x=0.28,
+            halign='right',
+            valign='middle'
+        )
+        history_label.bind(size=history_label.setter('text_size'))
+        
+        # Container per le carte nello storico
+        self.history_cards_box = BoxLayout(
+            orientation='horizontal',
+            size_hint_x=0.55,
+            spacing=3
+        )
+        
+        # Inizializza con 5 label vuote
+        self.history_labels = []
+        for i in range(5):
+            lbl = Label(
+                text='-',
+                color=(0.5, 0.5, 0.5, 1),
+                font_size='11sp',
+                halign='center',
+                valign='middle'
+            )
+            self.history_labels.append(lbl)
+            self.history_cards_box.add_widget(lbl)
+        
+        # Bottone CANCELLA
+        cancel_btn = Button(
+            text='CANCELLA',
+            background_color=(0.3, 0.8, 0.77, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='10sp',
+            bold=True,
+            size_hint_x=0.17
+        )
+        cancel_btn.bind(on_press=lambda x: self.undo_hand())
+        self.make_rounded_button(cancel_btn, radius=6)
+        
+        history_section.add_widget(history_label)
+        history_section.add_widget(self.history_cards_box)
+        history_section.add_widget(cancel_btn)
+        main_layout.add_widget(history_section)
+        
         # === MANO + AZIONE (2 colonne) ===
         game_info = BoxLayout(
             orientation='horizontal',
@@ -420,7 +465,7 @@ class BlackjackApp(App):
             text='[b]MANO[/b]',
             markup=True,
             color=(0.28, 0.73, 0.44, 1),
-            font_size='11sp',
+            font_size='12sp',
             size_hint_y=0.12,
             halign='center',
             valign='top'
@@ -440,7 +485,7 @@ class BlackjackApp(App):
         self.player_label = Label(
             text='Io: -',
             color=(0.3, 0.8, 0.77, 1),
-            font_size='10sp',
+            font_size='12sp',
             halign='left',
             valign='middle',
             size_hint_y=0.24
@@ -451,7 +496,7 @@ class BlackjackApp(App):
         self.player_split_label = Label(
             text='Mano 2: -',
             color=(0.58, 0.88, 0.83, 1),
-            font_size='10sp',
+            font_size='12sp',
             halign='left',
             valign='middle',
             size_hint_y=0.12
@@ -461,7 +506,7 @@ class BlackjackApp(App):
         self.table_label = Label(
             text='Tavolo: -',
             color=(0.6, 0.6, 0.6, 1),
-            font_size='11sp',
+            font_size='12sp',
             halign='left',
             valign='top',
             size_hint_y=0.35
@@ -476,7 +521,7 @@ class BlackjackApp(App):
             background_color=(0.50, 0.35, 0.84, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='10sp',
+            font_size='11sp',
             bold=True
         )
         self.activate_split_btn.bind(on_press=lambda x: self.activate_split())
@@ -538,7 +583,7 @@ class BlackjackApp(App):
             text='[b]AZIONE[/b]',
             markup=True,
             color=(0.96, 0.68, 0.35, 1),
-            font_size='11sp',
+            font_size='12sp',
             size_hint_y=0.12,
             halign='center',
             valign='top'
@@ -548,7 +593,7 @@ class BlackjackApp(App):
         self.strategy_label = Label(
             text='Inserisci carte',
             color=(1, 1, 1, 1),
-            font_size='16sp',
+            font_size='17sp',
             bold=True,
             halign='center',
             valign='middle'
@@ -570,15 +615,15 @@ class BlackjackApp(App):
             spacing=8
         )
         
-        # Input scommessa
-        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=0.18, spacing=6, padding=[0, 0])
+        # Input scommessa con controlli rapidi
+        bet_input_box = BoxLayout(orientation='horizontal', size_hint_y=0.18, spacing=3, padding=[0, 0])
         
         bet_label = Label(
             text='Puntata €:',
             color=(0.96, 0.68, 0.35, 1),
             font_size='12sp',
             bold=True,
-            size_hint_x=0.28,
+            size_hint_x=0.22,
             halign='right',
             valign='middle'
         )
@@ -589,17 +634,85 @@ class BlackjackApp(App):
             text=f'{initial_bet:.0f}',
             multiline=False,
             font_size='13sp',
-            size_hint_x=0.55,
+            size_hint_x=0.20,
             background_color=(0.146, 0.168, 0.231, 1),
             foreground_color=(1, 1, 1, 1),
             cursor_color=(0.3, 0.8, 0.77, 1),
-            padding=[10, 6],
+            padding=[8, 6],
             halign='center'
         )
         
+        # Radio buttons per modalità + o -
+        self.bet_mode_plus = ToggleButton(
+            text='+',
+            group='bet_mode',
+            state='down',
+            background_color=(0.13, 0.82, 0.52, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='16sp',
+            bold=True,
+            size_hint_x=0.10
+        )
+        self.bet_mode_plus.bind(on_press=lambda x: self.update_bet_mode_colors())
+        self.make_rounded_button(self.bet_mode_plus, radius=6)
+        
+        self.bet_mode_minus = ToggleButton(
+            text='-',
+            group='bet_mode',
+            background_color=(0.2, 0.22, 0.25, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='16sp',
+            bold=True,
+            size_hint_x=0.10
+        )
+        self.bet_mode_minus.bind(on_press=lambda x: self.update_bet_mode_colors())
+        self.make_rounded_button(self.bet_mode_minus, radius=6)
+        
+        bet5_btn = Button(
+            text='5',
+            background_color=(0.26, 0.60, 0.88, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='11sp',
+            bold=True,
+            size_hint_x=0.12
+        )
+        bet5_btn.bind(on_press=lambda x: self.adjust_bet_value(5))
+        self.make_rounded_button(bet5_btn, radius=6)
+        
+        bet10_btn = Button(
+            text='10',
+            background_color=(0.26, 0.60, 0.88, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='11sp',
+            bold=True,
+            size_hint_x=0.12
+        )
+        bet10_btn.bind(on_press=lambda x: self.adjust_bet_value(10))
+        self.make_rounded_button(bet10_btn, radius=6)
+        
+        bet20_btn = Button(
+            text='20',
+            background_color=(0.26, 0.60, 0.88, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='11sp',
+            bold=True,
+            size_hint_x=0.12
+        )
+        bet20_btn.bind(on_press=lambda x: self.adjust_bet_value(20))
+        self.make_rounded_button(bet20_btn, radius=6)
+        
         bet_input_box.add_widget(bet_label)
         bet_input_box.add_widget(self.bet_input)
-        bet_input_box.add_widget(Label(size_hint_x=0.17))  # Spacer
+        bet_input_box.add_widget(self.bet_mode_plus)
+        bet_input_box.add_widget(self.bet_mode_minus)
+        bet_input_box.add_widget(bet5_btn)
+        bet_input_box.add_widget(bet10_btn)
+        bet_input_box.add_widget(bet20_btn)
         
         # Bottoni risultato
         row1 = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=0.41)
@@ -620,7 +733,7 @@ class BlackjackApp(App):
             background_color=(0.6, 0.59, 0.95, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='11sp',
+            font_size='12sp',
             bold=True
         )
         push_btn.bind(on_press=lambda x: self.record_result('push'))
@@ -662,7 +775,7 @@ class BlackjackApp(App):
             background_color=(0.18, 0.37, 0.18, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='11sp',
+            font_size='12sp',
             bold=True
         )
         self.double_win_btn.bind(on_press=lambda x: self.record_result('double_win'))
@@ -673,7 +786,7 @@ class BlackjackApp(App):
             background_color=(0.49, 0.18, 0.18, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='11sp',
+            font_size='12sp',
             bold=True
         )
         self.double_loss_btn.bind(on_press=lambda x: self.record_result('double_loss'))
@@ -684,7 +797,7 @@ class BlackjackApp(App):
             background_color=(0.37, 0.35, 0.47, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='11sp',
+            font_size='12sp',
             bold=True
         )
         self.surrender_btn.bind(on_press=lambda x: self.record_result('surrender'))
@@ -809,11 +922,28 @@ class BlackjackApp(App):
         content.add_widget(min_bet_box)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.2))
+        content.add_widget(Label(size_hint_y=0.1))
         
-        # Bottone per impostare tavolo
+        # 1. Bottone imposta mazzi
+        new_shoe_btn = Button(
+            text='RESET MAZZI',
+            background_color=(0.3, 0.8, 0.77, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='12sp',
+            bold=True,
+            size_hint_y=0.13
+        )
+        new_shoe_btn.bind(on_press=lambda x: self.new_shoe())
+        self.make_rounded_button(new_shoe_btn, radius=10)
+        content.add_widget(new_shoe_btn)
+        
+        # Spazio
+        content.add_widget(Label(size_hint_y=0.05))
+        
+        # 2. Bottone reset soldi
         set_table_btn = Button(
-            text='IMPOSTA TAVOLO',
+            text='RESET SOLDI',
             background_color=(0.28, 0.73, 0.44, 1),
             background_normal='',
             color=(1, 1, 1, 1),
@@ -826,9 +956,9 @@ class BlackjackApp(App):
         content.add_widget(set_table_btn)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.1))
+        content.add_widget(Label(size_hint_y=0.05))
         
-        # Bottone reset mano corrente
+        # 3. Bottone reset mano corrente
         reset_hand_btn = Button(
             text='RESET MANO',
             background_color=(0.965, 0.616, 0.043, 1),  # Amber
@@ -836,45 +966,33 @@ class BlackjackApp(App):
             color=(0.039, 0.055, 0.102, 1),  # Dark text
             font_size='12sp',
             bold=True,
-            size_hint_y=0.16
+            size_hint_y=0.13
         )
         reset_hand_btn.bind(on_press=lambda x: self.reset_current_hand())
         self.make_rounded_button(reset_hand_btn, radius=10)
         content.add_widget(reset_hand_btn)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.1))
+        content.add_widget(Label(size_hint_y=0.05))
         
-        # Bottoni azioni
-        actions_row = BoxLayout(orientation='horizontal', size_hint_y=0.16, spacing=8)
-        
-        new_shoe_btn = Button(
-            text='NUOVA SHOE',
-            background_color=(0.3, 0.8, 0.77, 1),
-            background_normal='',
-            color=(1, 1, 1, 1),
-            font_size='11sp',
-            bold=True
-        )
-        new_shoe_btn.bind(on_press=lambda x: self.new_shoe())
-        self.make_rounded_button(new_shoe_btn, radius=8)
-        
+        # 4. Bottone reset tutto
         reset_all_btn = Button(
             text='RESET TUTTO',
             background_color=(0.90, 0.24, 0.24, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='11sp',
-            bold=True
+            font_size='12sp',
+            bold=True,
+            size_hint_y=0.13
         )
         reset_all_btn.bind(on_press=lambda x: self.reset_all())
-        self.make_rounded_button(reset_all_btn, radius=8)
+        self.make_rounded_button(reset_all_btn, radius=10)
+        content.add_widget(reset_all_btn)
         
-        actions_row.add_widget(new_shoe_btn)
-        actions_row.add_widget(reset_all_btn)
-        content.add_widget(actions_row)
+        # Spazio
+        content.add_widget(Label(size_hint_y=0.05))
         
-        # Bottone chiudi
+        # 5. Bottone chiudi
         close_btn = Button(
             text='CHIUDI',
             background_color=(0.6, 0.59, 0.95, 1),
@@ -907,22 +1025,49 @@ class BlackjackApp(App):
         """Cambia modalità"""
         self.mode = mode
         
-        # Colori scuri per non selezionati, brillanti per selezionato
+        # Colore verde brillante per selezionato, grigio scuro per non selezionati
+        selected_color = (0.13, 0.82, 0.52, 1)
+        unselected_color = (0.2, 0.22, 0.25, 1)
+        
         if mode == 'banco':
-            self.mode_banco_btn.background_color = (0.90, 0.24, 0.24, 1)
-            self.mode_mio_btn.background_color = (0.12, 0.35, 0.23, 1)
-            self.mode_tavolo_btn.background_color = (0.55, 0.42, 0.12, 1)
+            self.mode_banco_btn.background_color = selected_color
+            self.mode_mio_btn.background_color = unselected_color
+            self.mode_tavolo_btn.background_color = unselected_color
         elif mode == 'mio':
-            self.mode_banco_btn.background_color = (0.49, 0.13, 0.13, 1)
-            self.mode_mio_btn.background_color = (0.22, 0.63, 0.41, 1)
-            self.mode_tavolo_btn.background_color = (0.55, 0.42, 0.12, 1)
+            self.mode_banco_btn.background_color = unselected_color
+            self.mode_mio_btn.background_color = selected_color
+            self.mode_tavolo_btn.background_color = unselected_color
         else:  # tavolo
-            self.mode_banco_btn.background_color = (0.49, 0.13, 0.13, 1)
-            self.mode_mio_btn.background_color = (0.12, 0.35, 0.23, 1)
-            self.mode_tavolo_btn.background_color = (0.93, 0.79, 0.29, 1)
+            self.mode_banco_btn.background_color = unselected_color
+            self.mode_mio_btn.background_color = unselected_color
+            self.mode_tavolo_btn.background_color = selected_color
+    
+    def update_bet_mode_colors(self):
+        """Aggiorna colori dei bottoni +/- in base alla selezione"""
+        selected_color = (0.13, 0.82, 0.52, 1)  # Verde brillante
+        unselected_color = (0.2, 0.22, 0.25, 1)  # Grigio scuro
+        
+        if self.bet_mode_plus.state == 'down':
+            self.bet_mode_plus.background_color = selected_color
+            self.bet_mode_minus.background_color = unselected_color
+        else:
+            self.bet_mode_plus.background_color = unselected_color
+            self.bet_mode_minus.background_color = selected_color
     
     def add_card(self, card):
         """Aggiunge carta"""
+        # Salva nello storico prima di aggiungere
+        history_entry = {
+            'card': card,
+            'mode': self.mode,
+            'hand_index': self.current_hand_index if self.mode == 'mio' else None
+        }
+        self.card_history.append(history_entry)
+        
+        # Mantieni solo ultimi 5
+        if len(self.card_history) > 5:
+            self.card_history.pop(0)
+        
         # Aggiungi alla lista appropriata
         if self.mode == "banco":
             self.dealer_cards.append(card)
@@ -936,6 +1081,34 @@ class BlackjackApp(App):
         self.card_counter.add_card(card)
         
         self.update_display()
+        self.update_history_display()
+    
+    def update_history_display(self):
+        """Aggiorna la visualizzazione dello storico inserimenti"""
+        # Mostra le ultime 5 carte (da sinistra = più vecchia, a destra = più recente)
+        for i in range(5):
+            if i < len(self.card_history):
+                entry = self.card_history[i]
+                card = entry['card']
+                mode = entry['mode']
+                
+                # Nome modalità da mostrare
+                if mode == 'banco':
+                    mode_text = 'B'
+                    color = (0.90, 0.24, 0.24, 1)  # Rosso
+                elif mode == 'mio':
+                    mode_text = 'M'
+                    color = (0.13, 0.82, 0.52, 1)  # Verde
+                else:  # tavolo
+                    mode_text = 'T'
+                    color = (0.93, 0.79, 0.29, 1)  # Giallo
+                
+                self.history_labels[i].text = f"{card}({mode_text})"
+                self.history_labels[i].color = color
+            else:
+                # Slot vuoto
+                self.history_labels[i].text = '-'
+                self.history_labels[i].color = (0.5, 0.5, 0.5, 1)
     
     def activate_split(self):
         """Attiva modalità split - crea una nuova mano dalla carta corrente"""
@@ -1161,6 +1334,25 @@ class BlackjackApp(App):
             self.next_hand_btn.opacity = 0
             self.next_hand_btn.disabled = True
     
+    def adjust_bet_value(self, amount):
+        """Aggiunge o toglie un valore alla scommessa in base alla modalità selezionata (+/-)"""
+        try:
+            current = float(self.bet_input.text.strip())
+            
+            # Controlla quale modalità è selezionata
+            if self.bet_mode_plus.state == 'down':
+                # Modalità +: aggiungi
+                new_bet = current + amount
+            else:
+                # Modalità -: togli
+                new_bet = current - amount
+            
+            # Minimo 1€
+            new_bet = max(1, new_bet)
+            self.bet_input.text = f"{new_bet:.0f}"
+        except:
+            pass
+    
     def record_result(self, result):
         """Registra risultato"""
         try:
@@ -1197,6 +1389,10 @@ class BlackjackApp(App):
         self.player_hands = [[]]
         self.table_cards = []
         
+        # Reset storico inserimenti
+        self.card_history = []
+        self.update_history_display()
+        
         # Reset navigazione split
         self.current_hand_index = 0
         self.prev_hand_btn.opacity = 0
@@ -1207,21 +1403,37 @@ class BlackjackApp(App):
         self.update_display()
     
     def undo_hand(self):
-        """Annulla ultima mano"""
-        # Rimuovi l'ultima carta aggiunta dalla mano corrente
-        current_hand = self.player_hands[self.current_hand_index]
-        if current_hand:
-            last_card = current_hand.pop()
-            self.card_counter.remove_card(last_card)
-        elif self.dealer_cards:
-            last_card = self.dealer_cards.pop()
-            self.card_counter.remove_card(last_card)
-        elif self.table_cards:
-            last_card = self.table_cards.pop()
-            self.card_counter.remove_card(last_card)
+        """Cancella l'ultimo inserimento dallo storico"""
+        if not self.card_history:
+            self.show_toast("Nessun inserimento da cancellare")
+            return
+        
+        # Prendi l'ultimo inserimento
+        last_entry = self.card_history.pop()
+        card = last_entry['card']
+        mode = last_entry['mode']
+        hand_index = last_entry['hand_index']
+        
+        # Rimuovi la carta dalla lista appropriata
+        if mode == 'banco':
+            if card in self.dealer_cards:
+                self.dealer_cards.remove(card)
+        elif mode == 'mio':
+            # Rimuovi dalla mano specifica
+            if hand_index is not None and hand_index < len(self.player_hands):
+                if card in self.player_hands[hand_index]:
+                    self.player_hands[hand_index].remove(card)
+        else:  # tavolo
+            if card in self.table_cards:
+                self.table_cards.remove(card)
+        
+        # Rimuovi dal contatore
+        self.card_counter.remove_card(card)
         
         self.update_display()
-        self.show_toast("<- Annullato")
+        self.update_history_display()
+        remaining = len(self.card_history)
+        self.show_toast(f"Cancellato {card} ({remaining} nello storico)")
     
     def set_table_settings(self):
         """Imposta bankroll e minima tavolo (cambio tavolo)"""
@@ -1267,20 +1479,41 @@ class BlackjackApp(App):
             self.show_toast("Numero mazzi non valido")
             return
         
-        # Mantieni il bankroll attuale
+        # Salva i valori da mantenere
         current_bankroll = getattr(self.card_counter, 'current_bankroll', 100)
+        initial_bankroll = getattr(self.card_counter, 'initial_bankroll', 100)
+        table_minimum = getattr(self.card_counter, 'table_minimum', 5)
+        betting_unit = getattr(self.card_counter, 'betting_unit', 10)
+        hands_played = getattr(self.card_counter, 'hands_played', 0)
+        hands_won = getattr(self.card_counter, 'hands_won', 0)
+        hands_lost = getattr(self.card_counter, 'hands_lost', 0)
+        hands_pushed = getattr(self.card_counter, 'hands_pushed', 0)
         
-        # Resetta conteggio
-        self.card_counter.set_decks(decks)
+        # Resetta solo conteggio carte
         self.card_counter.running_count = 0
+        self.card_counter.cards_seen = 0
+        self.card_counter.decks_remaining = decks
+        self.card_counter.total_cards = decks * 52
+        self.card_counter._init_card_tracking()
         
-        # Ripristina bankroll
+        # Ripristina tutti i valori da mantenere
         self.card_counter.current_bankroll = current_bankroll
+        self.card_counter.initial_bankroll = initial_bankroll
+        self.card_counter.table_minimum = table_minimum
+        self.card_counter.betting_unit = betting_unit
+        self.card_counter.hands_played = hands_played
+        self.card_counter.hands_won = hands_won
+        self.card_counter.hands_lost = hands_lost
+        self.card_counter.hands_pushed = hands_pushed
         
         # Reset mani correnti
         self.dealer_cards = []
         self.player_hands = [[]]
         self.table_cards = []
+        
+        # Reset storico inserimenti
+        self.card_history = []
+        self.update_history_display()
         
         # Reset navigazione split
         self.current_hand_index = 0
@@ -1324,6 +1557,10 @@ class BlackjackApp(App):
         self.player_hands = [[]]
         self.table_cards = []
         
+        # Reset storico inserimenti
+        self.card_history = []
+        self.update_history_display()
+        
         # Reset navigazione split
         self.current_hand_index = 0
         if hasattr(self, 'prev_hand_btn'):
@@ -1358,6 +1595,10 @@ class BlackjackApp(App):
         self.dealer_cards = []
         self.player_hands = [[]]
         self.table_cards = []
+        
+        # Reset storico inserimenti
+        self.card_history = []
+        self.update_history_display()
         
         # Reset navigazione split
         self.current_hand_index = 0
