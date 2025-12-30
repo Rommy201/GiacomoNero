@@ -380,15 +380,47 @@ class BlackjackApp(App):
         
         # Container principale
         root = FloatLayout()
-        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        content = BoxLayout(orientation='vertical', padding=20, spacing=12)
+        
+        # Logo/Icona (placeholder con canvas)
+        logo_container = BoxLayout(size_hint_y=0.18)
+        logo = Widget()
+        
+        def draw_logo(instance, value):
+            logo.canvas.before.clear()
+            with logo.canvas.before:
+                # Cerchio esterno - carta da gioco
+                Color(0.45, 0.65, 0.70, 1)
+                from kivy.graphics import Ellipse, Line
+                center_x = logo.center_x
+                center_y = logo.center_y
+                size = min(logo.width, logo.height) * 0.5
+                
+                Ellipse(pos=(center_x - size/2, center_y - size/2), size=(size, size))
+                
+                # Simbolo A (Asso)
+                Color(0.059, 0.078, 0.098, 1)
+                from kivy.graphics import Triangle
+                # Triangolo A
+                tri_height = size * 0.4
+                tri_base = size * 0.3
+                Triangle(points=[
+                    center_x, center_y + tri_height/2,
+                    center_x - tri_base/2, center_y - tri_height/2,
+                    center_x + tri_base/2, center_y - tri_height/2
+                ])
+        
+        logo.bind(pos=draw_logo, size=draw_logo)
+        logo_container.add_widget(logo)
+        content.add_widget(logo_container)
         
         # Titolo
         title = Label(
             text=f'[b]{self.t("welcome_title")}[/b]',
             markup=True,
             color=(0.45, 0.65, 0.70, 1),
-            font_size='18sp',
-            size_hint_y=0.15,
+            font_size='20sp',
+            size_hint_y=0.10,
             halign='center',
             valign='middle'
         )
@@ -399,8 +431,8 @@ class BlackjackApp(App):
         subtitle = Label(
             text=self.t('welcome_subtitle'),
             color=(0.7, 0.7, 0.7, 1),
-            font_size='13sp',
-            size_hint_y=0.08,
+            font_size='15sp',
+            size_hint_y=0.06,
             halign='center',
             valign='middle'
         )
@@ -408,15 +440,15 @@ class BlackjackApp(App):
         content.add_widget(subtitle)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.05))
+        content.add_widget(Label(size_hint_y=0.02))
         
         # Input mazzi
-        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.09, spacing=10)
         decks_label = Label(
             text=self.t('num_decks'),
             color=(1, 1, 1, 1),
-            font_size='13sp',
-            size_hint_x=0.45,
+            font_size='15sp',
+            size_hint_x=0.5,
             halign='left',
             valign='middle'
         )
@@ -424,23 +456,23 @@ class BlackjackApp(App):
         self.welcome_decks_input = TextInput(
             text='6',
             multiline=False,
-            font_size='14sp',
-            size_hint_x=0.55,
+            font_size='16sp',
+            size_hint_x=0.5,
             background_color=(0.146, 0.168, 0.231, 1),
             foreground_color=(1, 1, 1, 1),
-            padding=[10, 10]
+            padding=[10, 6]
         )
         decks_box.add_widget(decks_label)
         decks_box.add_widget(self.welcome_decks_input)
         content.add_widget(decks_box)
         
         # Input bankroll
-        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.09, spacing=10)
         bankroll_label = Label(
             text=self.t('bankroll_setup'),
             color=(1, 1, 1, 1),
-            font_size='13sp',
-            size_hint_x=0.45,
+            font_size='15sp',
+            size_hint_x=0.5,
             halign='left',
             valign='middle'
         )
@@ -448,23 +480,23 @@ class BlackjackApp(App):
         self.welcome_bankroll_input = TextInput(
             text='100',
             multiline=False,
-            font_size='14sp',
-            size_hint_x=0.55,
+            font_size='16sp',
+            size_hint_x=0.5,
             background_color=(0.146, 0.168, 0.231, 1),
             foreground_color=(1, 1, 1, 1),
-            padding=[10, 10]
+            padding=[10, 6]
         )
         bankroll_box.add_widget(bankroll_label)
         bankroll_box.add_widget(self.welcome_bankroll_input)
         content.add_widget(bankroll_box)
         
         # Input minimo tavolo
-        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.09, spacing=10)
         min_bet_label = Label(
             text=self.t('min_bet_setup'),
             color=(1, 1, 1, 1),
-            font_size='13sp',
-            size_hint_x=0.45,
+            font_size='15sp',
+            size_hint_x=0.5,
             halign='left',
             valign='middle'
         )
@@ -472,29 +504,29 @@ class BlackjackApp(App):
         self.welcome_min_bet_input = TextInput(
             text='5',
             multiline=False,
-            font_size='14sp',
-            size_hint_x=0.55,
+            font_size='16sp',
+            size_hint_x=0.5,
             background_color=(0.146, 0.168, 0.231, 1),
             foreground_color=(1, 1, 1, 1),
-            padding=[10, 10]
+            padding=[10, 6]
         )
         min_bet_box.add_widget(min_bet_label)
         min_bet_box.add_widget(self.welcome_min_bet_input)
         content.add_widget(min_bet_box)
         
         # Selezione lingua
-        lang_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        lang_box = BoxLayout(orientation='horizontal', size_hint_y=0.09, spacing=10)
         lang_label = Label(
             text=self.t('language'),
             color=(1, 1, 1, 1),
-            font_size='13sp',
-            size_hint_x=0.45,
+            font_size='15sp',
+            size_hint_x=0.5,
             halign='left',
             valign='middle'
         )
         lang_label.bind(size=lang_label.setter('text_size'))
         
-        lang_buttons_box = BoxLayout(orientation='horizontal', spacing=5, size_hint_x=0.55)
+        lang_buttons_box = BoxLayout(orientation='horizontal', spacing=5, size_hint_x=0.5)
         
         self.welcome_lang_it_btn = ToggleButton(
             text='IT',
@@ -503,7 +535,7 @@ class BlackjackApp(App):
             background_color=(0.35, 0.60, 0.50, 1) if self.language == 'it' else (0.2, 0.22, 0.25, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='13sp',
+            font_size='15sp',
             bold=True
         )
         self.welcome_lang_it_btn.bind(on_press=lambda x: self.change_welcome_language('it'))
@@ -516,7 +548,7 @@ class BlackjackApp(App):
             background_color=(0.35, 0.60, 0.50, 1) if self.language == 'en' else (0.2, 0.22, 0.25, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='13sp',
+            font_size='12sp',
             bold=True
         )
         self.welcome_lang_en_btn.bind(on_press=lambda x: self.change_welcome_language('en'))
@@ -530,7 +562,7 @@ class BlackjackApp(App):
         content.add_widget(lang_box)
         
         # Spazio
-        content.add_widget(Label(size_hint_y=0.1))
+        content.add_widget(Label(size_hint_y=0.08))
         
         # Bottone start
         start_btn = Button(
@@ -538,16 +570,16 @@ class BlackjackApp(App):
             background_color=(0.35, 0.60, 0.50, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='16sp',
+            font_size='18sp',
             bold=True,
-            size_hint_y=0.15
+            size_hint_y=0.11
         )
         start_btn.bind(on_press=lambda x: self.start_app_from_welcome())
         self.make_rounded_button(start_btn, radius=12)
         content.add_widget(start_btn)
         
         # Spazio finale
-        content.add_widget(Label(size_hint_y=0.1))
+        content.add_widget(Label(size_hint_y=0.08))
         
         root.add_widget(content)
         screen.add_widget(root)
@@ -635,7 +667,7 @@ class BlackjackApp(App):
             text='[b]BLACKJACK PRO[/b]',
             markup=True,
             color=(1, 1, 1, 1),
-            font_size='16sp',
+            font_size='19sp',
             size_hint_x=0.7
         )
         
@@ -644,7 +676,7 @@ class BlackjackApp(App):
             background_color=(0.3, 0.8, 0.77, 1),
             background_normal='',
             color=(1, 1, 1, 1),
-            font_size='13sp',
+            font_size='16sp',
             bold=True,
             size_hint_x=0.3
         )
