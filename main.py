@@ -9,10 +9,13 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
 from kivy.uix.widget import Widget
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.utils import platform
+import json
+import os
 
 from card_counter import CardCounter
 from strategy import BlackjackStrategy
@@ -98,6 +101,11 @@ TRANSLATIONS = {
         'invalid_deck_number': 'Numero mazzi non valido',
         'new_shoe_msg': 'Nuova shoe ({0:.0f} mazzi)',
         'reset_complete': 'Reset completo',
+        
+        # Welcome screen
+        'welcome_title': 'BENVENUTO SU BLACKJACK PRO',
+        'welcome_subtitle': 'Configura il tuo tavolo',
+        'start_playing': 'INIZIA A GIOCARE',
         
         # Setup popup
         'setup_title': 'Impostazioni',
@@ -202,6 +210,11 @@ TRANSLATIONS = {
         'new_shoe_msg': 'New shoe ({0:.0f} decks)',
         'reset_complete': 'Complete reset',
         
+        # Welcome screen
+        'welcome_title': 'WELCOME TO BLACKJACK PRO',
+        'welcome_subtitle': 'Configure your table',
+        'start_playing': 'START PLAYING',
+        
         # Setup popup
         'setup_title': 'Settings',
         'bankroll_setup': 'Initial bankroll:',
@@ -301,13 +314,11 @@ class BlackjackApp(App):
     def load_language(self):
         """Carica la lingua salvata dalle preferenze"""
         try:
-            import json
-            import os
-            pref_file = os.path.join(os.path.expanduser('~'), '.giacomonero_lang.json')
-            if os.path.exists(pref_file):
-                with open(pref_file, 'r') as f:
-                    prefs = json.load(f)
-                    return prefs.get('language', 'it')
+            lang_file = os.path.join(os.path.expanduser('~'), '.giacomonero_lang.json')
+            if os.path.exists(lang_file):
+                with open(lang_file, 'r') as f:
+                    data = json.load(f)
+                    return data.get('language', 'it')
         except:
             pass
         return 'it'  # Default italiano
@@ -315,10 +326,8 @@ class BlackjackApp(App):
     def save_language(self, lang):
         """Salva la lingua nelle preferenze"""
         try:
-            import json
-            import os
-            pref_file = os.path.join(os.path.expanduser('~'), '.giacomonero_lang.json')
-            with open(pref_file, 'w') as f:
+            lang_file = os.path.join(os.path.expanduser('~'), '.giacomonero_lang.json')
+            with open(lang_file, 'w') as f:
                 json.dump({'language': lang}, f)
         except:
             pass
@@ -350,10 +359,246 @@ class BlackjackApp(App):
     def build(self):
         # Inizializza il contatore
         self.card_counter = CardCounter()
-        # Inizializza con default 100 euro bankroll e 5 euro minima
+        
+        # Inizializza con valori default temporanei
         self.card_counter.set_bankroll(100)
         self.card_counter.set_table_minimum(5)
         self.strategy = BlackjackStrategy(self.language)
+        
+        # Crea lo ScreenManager
+        self.screen_manager = ScreenManager()
+        
+        # Mostra sempre la welcome screen
+        welcome_screen = self.build_welcome_screen()
+        self.screen_manager.add_widget(welcome_screen)
+        
+        return self.screen_manager
+    
+    def build_welcome_screen(self):
+        """Costruisce la schermata di benvenuto iniziale"""
+        screen = Screen(name='welcome')
+        
+        # Container principale
+        root = FloatLayout()
+        content = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        
+        # Titolo
+        title = Label(
+            text=f'[b]{self.t("welcome_title")}[/b]',
+            markup=True,
+            color=(0.45, 0.65, 0.70, 1),
+            font_size='18sp',
+            size_hint_y=0.15,
+            halign='center',
+            valign='middle'
+        )
+        title.bind(size=title.setter('text_size'))
+        content.add_widget(title)
+        
+        # Sottotitolo
+        subtitle = Label(
+            text=self.t('welcome_subtitle'),
+            color=(0.7, 0.7, 0.7, 1),
+            font_size='13sp',
+            size_hint_y=0.08,
+            halign='center',
+            valign='middle'
+        )
+        subtitle.bind(size=subtitle.setter('text_size'))
+        content.add_widget(subtitle)
+        
+        # Spazio
+        content.add_widget(Label(size_hint_y=0.05))
+        
+        # Input mazzi
+        decks_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        decks_label = Label(
+            text=self.t('num_decks'),
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            size_hint_x=0.45,
+            halign='left',
+            valign='middle'
+        )
+        decks_label.bind(size=decks_label.setter('text_size'))
+        self.welcome_decks_input = TextInput(
+            text='6',
+            multiline=False,
+            font_size='14sp',
+            size_hint_x=0.55,
+            background_color=(0.146, 0.168, 0.231, 1),
+            foreground_color=(1, 1, 1, 1),
+            padding=[10, 10]
+        )
+        decks_box.add_widget(decks_label)
+        decks_box.add_widget(self.welcome_decks_input)
+        content.add_widget(decks_box)
+        
+        # Input bankroll
+        bankroll_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        bankroll_label = Label(
+            text=self.t('bankroll_setup'),
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            size_hint_x=0.45,
+            halign='left',
+            valign='middle'
+        )
+        bankroll_label.bind(size=bankroll_label.setter('text_size'))
+        self.welcome_bankroll_input = TextInput(
+            text='100',
+            multiline=False,
+            font_size='14sp',
+            size_hint_x=0.55,
+            background_color=(0.146, 0.168, 0.231, 1),
+            foreground_color=(1, 1, 1, 1),
+            padding=[10, 10]
+        )
+        bankroll_box.add_widget(bankroll_label)
+        bankroll_box.add_widget(self.welcome_bankroll_input)
+        content.add_widget(bankroll_box)
+        
+        # Input minimo tavolo
+        min_bet_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        min_bet_label = Label(
+            text=self.t('min_bet_setup'),
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            size_hint_x=0.45,
+            halign='left',
+            valign='middle'
+        )
+        min_bet_label.bind(size=min_bet_label.setter('text_size'))
+        self.welcome_min_bet_input = TextInput(
+            text='5',
+            multiline=False,
+            font_size='14sp',
+            size_hint_x=0.55,
+            background_color=(0.146, 0.168, 0.231, 1),
+            foreground_color=(1, 1, 1, 1),
+            padding=[10, 10]
+        )
+        min_bet_box.add_widget(min_bet_label)
+        min_bet_box.add_widget(self.welcome_min_bet_input)
+        content.add_widget(min_bet_box)
+        
+        # Selezione lingua
+        lang_box = BoxLayout(orientation='horizontal', size_hint_y=0.12, spacing=10)
+        lang_label = Label(
+            text=self.t('language'),
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            size_hint_x=0.45,
+            halign='left',
+            valign='middle'
+        )
+        lang_label.bind(size=lang_label.setter('text_size'))
+        
+        lang_buttons_box = BoxLayout(orientation='horizontal', spacing=5, size_hint_x=0.55)
+        
+        self.welcome_lang_it_btn = ToggleButton(
+            text='IT',
+            group='welcome_language',
+            state='down' if self.language == 'it' else 'normal',
+            background_color=(0.35, 0.60, 0.50, 1) if self.language == 'it' else (0.2, 0.22, 0.25, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            bold=True
+        )
+        self.welcome_lang_it_btn.bind(on_press=lambda x: self.change_welcome_language('it'))
+        self.make_rounded_button(self.welcome_lang_it_btn, radius=8)
+        
+        self.welcome_lang_en_btn = ToggleButton(
+            text='EN',
+            group='welcome_language',
+            state='down' if self.language == 'en' else 'normal',
+            background_color=(0.35, 0.60, 0.50, 1) if self.language == 'en' else (0.2, 0.22, 0.25, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='13sp',
+            bold=True
+        )
+        self.welcome_lang_en_btn.bind(on_press=lambda x: self.change_welcome_language('en'))
+        self.make_rounded_button(self.welcome_lang_en_btn, radius=8)
+        
+        lang_buttons_box.add_widget(self.welcome_lang_it_btn)
+        lang_buttons_box.add_widget(self.welcome_lang_en_btn)
+        
+        lang_box.add_widget(lang_label)
+        lang_box.add_widget(lang_buttons_box)
+        content.add_widget(lang_box)
+        
+        # Spazio
+        content.add_widget(Label(size_hint_y=0.1))
+        
+        # Bottone start
+        start_btn = Button(
+            text=self.t('start_playing'),
+            background_color=(0.35, 0.60, 0.50, 1),
+            background_normal='',
+            color=(1, 1, 1, 1),
+            font_size='16sp',
+            bold=True,
+            size_hint_y=0.15
+        )
+        start_btn.bind(on_press=lambda x: self.start_app_from_welcome())
+        self.make_rounded_button(start_btn, radius=12)
+        content.add_widget(start_btn)
+        
+        # Spazio finale
+        content.add_widget(Label(size_hint_y=0.1))
+        
+        root.add_widget(content)
+        screen.add_widget(root)
+        return screen
+    
+    def change_welcome_language(self, lang):
+        """Cambia la lingua nella schermata di benvenuto"""
+        if lang != self.language:
+            self.language = lang
+            # Aggiorna colori bottoni
+            self.welcome_lang_it_btn.background_color = (0.35, 0.60, 0.50, 1) if lang == 'it' else (0.2, 0.22, 0.25, 1)
+            self.welcome_lang_en_btn.background_color = (0.35, 0.60, 0.50, 1) if lang == 'en' else (0.2, 0.22, 0.25, 1)
+            # Ricostruisci la schermata con la nuova lingua
+            self.screen_manager.clear_widgets()
+            welcome_screen = self.build_welcome_screen()
+            self.screen_manager.add_widget(welcome_screen)
+    
+    def start_app_from_welcome(self):
+        """Avvia l'app principale dalla welcome screen"""
+        try:
+            # Leggi valori dagli input
+            decks = float(self.welcome_decks_input.text)
+            bankroll = float(self.welcome_bankroll_input.text)
+            min_bet = float(self.welcome_min_bet_input.text)
+            
+            # Valida i valori
+            if decks <= 0 or bankroll <= 0 or min_bet <= 0:
+                return
+            
+            # Salva solo la lingua
+            self.save_language(self.language)
+            
+            # Configura il card counter
+            self.card_counter.set_bankroll(bankroll)
+            self.card_counter.set_table_minimum(min_bet)
+            self.card_counter.decks_remaining = decks
+            self.card_counter.total_decks = decks
+            self.strategy = BlackjackStrategy(self.language)
+            
+            # Rimuovi la welcome screen e aggiungi la main screen
+            self.screen_manager.clear_widgets()
+            main_screen = self.build_main_screen()
+            self.screen_manager.add_widget(main_screen)
+            
+        except ValueError:
+            pass  # Valori non validi
+    
+    def build_main_screen(self):
+        """Costruisce la schermata principale del gioco"""
+        screen = Screen(name='main')
+        
         self.mode = "banco"
         
         # Gestione mani localmente
@@ -371,6 +616,7 @@ class BlackjackApp(App):
         
         # BoxLayout per il contenuto principale
         content = BoxLayout(orientation='vertical', padding=0, spacing=0, size_hint=(1, 1))
+
         
         # === HEADER FISSO CON BOTTONE SETUP ===
         header = BoxLayout(
@@ -1058,17 +1304,40 @@ class BlackjackApp(App):
         # Aggiorna display per sincronizzare tutto con i valori corretti
         self.update_display()
         
-        return root
+        screen.add_widget(root)
+        return screen
     
     def show_toast(self, message):
         """Mostra toast notification"""
-        if hasattr(self, 'toast_widget') and self.toast_widget:
-            self.root.remove_widget(self.toast_widget)
-        
-        self.toast_widget = ToastWidget(message)
-        self.root.add_widget(self.toast_widget)
-        
-        Clock.schedule_once(lambda dt: self.root.remove_widget(self.toast_widget), 2)
+        # Trova il root widget della schermata corrente
+        try:
+            current_screen = self.screen_manager.get_screen(self.screen_manager.current)
+            root = current_screen.children[0] if current_screen.children else None
+            
+            if not root:
+                return
+            
+            if hasattr(self, 'toast_widget') and self.toast_widget:
+                try:
+                    root.remove_widget(self.toast_widget)
+                except:
+                    pass
+            
+            self.toast_widget = ToastWidget(message)
+            root.add_widget(self.toast_widget)
+            
+            Clock.schedule_once(lambda dt: self._remove_toast(root), 2)
+        except:
+            pass
+    
+    def _remove_toast(self, root):
+        """Rimuove il toast widget"""
+        try:
+            if hasattr(self, 'toast_widget') and self.toast_widget:
+                root.remove_widget(self.toast_widget)
+        except:
+            pass
+
     
     def change_language(self, lang):
         """Cambia la lingua dell'interfaccia"""
@@ -1259,7 +1528,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.11
+            size_hint_y=0.10
         )
         new_shoe_btn.bind(on_press=lambda x: self.new_shoe())
         self.make_rounded_button(new_shoe_btn, radius=10)
@@ -1276,7 +1545,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.11
+            size_hint_y=0.10
         )
         set_table_btn.bind(on_press=lambda x: self.set_table_settings())
         self.make_rounded_button(set_table_btn, radius=10)
@@ -1293,7 +1562,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.11
+            size_hint_y=0.10
         )
         reset_hand_btn.bind(on_press=lambda x: self.reset_current_hand())
         self.make_rounded_button(reset_hand_btn, radius=10)
@@ -1310,7 +1579,7 @@ class BlackjackApp(App):
             color=(1, 1, 1, 1),
             font_size='12sp',
             bold=True,
-            size_hint_y=0.11
+            size_hint_y=0.10
         )
         reset_all_btn.bind(on_press=lambda x: self.reset_all())
         self.make_rounded_button(reset_all_btn, radius=10)
@@ -1330,6 +1599,7 @@ class BlackjackApp(App):
             size_hint_y=0.10
         )
         self.make_rounded_button(close_btn, radius=8)
+
         
         # Crea popup
         popup = Popup(
@@ -1746,11 +2016,11 @@ class BlackjackApp(App):
                 # Passa alla prossima mano
                 self.current_hand_index = next_hand
                 self.update_display()
-                Clock.schedule_once(lambda dt: self.show_toast(self.t('register_hand', next_hand + 1, total_hands)), 1.5)
+                self.show_toast(self.t('register_hand', next_hand + 1, total_hands))
         else:
             # Tutte le mani completate - reset completo
-            Clock.schedule_once(lambda dt: self.show_toast(self.t('all_hands_completed')), 1.5)
-            Clock.schedule_once(self._complete_hand_reset, 2)
+            self.show_toast(self.t('all_hands_completed'))
+            self._complete_hand_reset()
     
     def _complete_hand_reset(self, *args):
         """Reset completo dopo aver registrato tutte le mani"""
