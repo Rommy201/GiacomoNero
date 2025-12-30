@@ -2,13 +2,56 @@
 Tabella strategia base del Blackjack con modifiche basate sul card counting
 """
 
+# Dizionario traduzioni per i suggerimenti strategici
+STRATEGY_TRANSLATIONS = {
+    'it': {
+        'hit': 'Chiedi carta',
+        'stand': 'Stai',
+        'double': 'Raddoppia (poi chiedi una sola carta)',
+        'split': 'Dividi la coppia in due mani separate',
+        'surrender': 'Arrenditi (recupera metà della puntata)',
+        'bust': 'Hai sballato - Hai perso',
+        'unknown_action': 'Azione sconosciuta',
+        'strategy_modified': '(Strategia modificata per TC={0:.1f})',
+        'if_cant_double': 'Se non puoi raddoppiare, chiedi carta',
+        'if_cant_surrender': 'Se non puoi arrenderti: {0}',
+        'if_cant_surrender_default': 'Se non puoi arrenderti, chiedi carta',
+        'blackjack_21': 'Hai 21! Blackjack!',
+        'have_21': 'Hai 21!',
+        'busted': 'Sballato!',
+        'insurance': 'ASSICURAZIONE: {0}',
+        'take_insurance': 'PRENDI l\'assicurazione',
+        'no_insurance': 'NON prendere l\'assicurazione',
+    },
+    'en': {
+        'hit': 'Hit',
+        'stand': 'Stand',
+        'double': 'Double down (then take one card only)',
+        'split': 'Split the pair into two separate hands',
+        'surrender': 'Surrender (recover half of your bet)',
+        'bust': 'You busted - You lost',
+        'unknown_action': 'Unknown action',
+        'strategy_modified': '(Strategy modified for TC={0:.1f})',
+        'if_cant_double': 'If you can\'t double, hit',
+        'if_cant_surrender': 'If you can\'t surrender: {0}',
+        'if_cant_surrender_default': 'If you can\'t surrender, hit',
+        'blackjack_21': 'You have 21! Blackjack!',
+        'have_21': 'You have 21!',
+        'busted': 'Busted!',
+        'insurance': 'INSURANCE: {0}',
+        'take_insurance': 'TAKE insurance',
+        'no_insurance': 'DON\'T take insurance',
+    }
+}
+
 
 class BlackjackStrategy:
     """
     Strategia di base del Blackjack con aggiustamenti basati sul True Count
     """
     
-    def __init__(self):
+    def __init__(self, language='it'):
+        self.language = language
         # Tabella strategia di base per mani hard (senza assi)
         self.hard_strategy = self._init_hard_strategy()
         
@@ -196,6 +239,13 @@ class BlackjackStrategy:
                         strategy[key] = 'HIT'
         
         return strategy
+    
+    def t(self, key, *args):
+        """Helper per traduzione con supporto formattazione"""
+        text = STRATEGY_TRANSLATIONS.get(self.language, STRATEGY_TRANSLATIONS['it']).get(key, key)
+        if args:
+            return text.format(*args)
+        return text
         
     def get_suggestion(self, player_total, dealer_card, is_soft=False, is_pair=False, true_count=0, num_cards=2):
         """
@@ -223,9 +273,9 @@ class BlackjackStrategy:
         if player_total == 21:
             # Blackjack solo con 2 carte
             if num_cards == 2:
-                description = 'Hai 21! Blackjack!'
+                description = self.t('blackjack_21')
             else:
-                description = 'Hai 21!'
+                description = self.t('have_21')
             return {
                 'action': 'STAND',
                 'description': description
@@ -235,7 +285,7 @@ class BlackjackStrategy:
         if player_total > 21:
             return {
                 'action': 'BUST',
-                'description': 'Sballato!'
+                'description': self.t('busted')
             }
         
         action = None
@@ -283,7 +333,7 @@ class BlackjackStrategy:
         # Controlla se suggerire l'assicurazione
         insurance_suggestion = None
         if dealer_card == 'A' and true_count >= 3:
-            insurance_suggestion = f"ASSICURAZIONE: Sì (TC={true_count:.1f} >= 3)"
+            insurance_suggestion = self.t('insurance', self.t('take_insurance') + f" (TC={true_count:.1f} >= 3)")
         
         # Genera descrizione
         description = self._get_action_description(action, player_total, dealer_card, adjusted, true_count, fallback_action)
@@ -502,28 +552,28 @@ class BlackjackStrategy:
     def _get_action_description(self, action, player_total, dealer_card, adjusted, true_count, fallback_action=None):
         """Genera una descrizione dell'azione suggerita"""
         descriptions = {
-            'HIT': 'Chiedi carta',
-            'STAND': 'Stai',
-            'DOUBLE': 'Raddoppia (poi chiedi una sola carta)',
-            'SPLIT': 'Dividi la coppia in due mani separate',
-            'SURRENDER': 'Arrenditi (recupera metà della puntata)',
-            'BUST': 'Hai sballato - Hai perso'
+            'HIT': self.t('hit'),
+            'STAND': self.t('stand'),
+            'DOUBLE': self.t('double'),
+            'SPLIT': self.t('split'),
+            'SURRENDER': self.t('surrender'),
+            'BUST': self.t('bust')
         }
         
-        desc = descriptions.get(action, 'Azione sconosciuta')
+        desc = descriptions.get(action, self.t('unknown_action'))
         
         if adjusted:
-            desc += f"\n(Strategia modificata per TC={true_count:.1f})"
+            desc += "\n" + self.t('strategy_modified', true_count)
         
         # Aggiungi informazioni specifiche
         if action == 'DOUBLE':
-            desc += "\nSe non puoi raddoppiare, chiedi carta"
+            desc += "\n" + self.t('if_cant_double')
         elif action == 'SURRENDER':
             # Mostra l'azione alternativa se surrender non è disponibile
             if fallback_action:
-                fallback_desc = descriptions.get(fallback_action, 'chiedi carta')
-                desc += f"\nSe non puoi arrenderti: {fallback_desc}"
+                fallback_desc = descriptions.get(fallback_action, self.t('hit'))
+                desc += "\n" + self.t('if_cant_surrender', fallback_desc)
             else:
-                desc += "\nSe non puoi arrenderti, chiedi carta"
+                desc += "\n" + self.t('if_cant_surrender_default')
             
         return desc
