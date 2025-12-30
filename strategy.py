@@ -221,9 +221,14 @@ class BlackjackStrategy:
             
         # Se il giocatore ha 21, sempre STAND
         if player_total == 21:
+            # Blackjack solo con 2 carte
+            if num_cards == 2:
+                description = 'Hai 21! Blackjack!'
+            else:
+                description = 'Hai 21!'
             return {
                 'action': 'STAND',
-                'description': 'Hai 21! Blackjack!'
+                'description': description
             }
         
         # Se il giocatore ha più di 21, hai sballato
